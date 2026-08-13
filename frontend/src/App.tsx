@@ -16,7 +16,10 @@ export interface MeetingSession {
 }
 
 const App: React.FC = () => {
-    const apiBase = window.location.origin;
+    const apiBase = (import.meta as any).env.VITE_API_URL || 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://127.0.0.1:5000' 
+            : 'https://attentix-meeting.onrender.com');
     
     // Core States
     const [view, setView] = useState<'auth' | 'lobby' | 'meeting' | 'dashboard'>('auth');

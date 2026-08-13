@@ -17,7 +17,10 @@ interface RemotePeer {
 }
 
 const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboard }) => {
-    const apiBase = window.location.origin;
+    const apiBase = (import.meta as any).env.VITE_API_URL || 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://127.0.0.1:5000' 
+            : 'https://attentix-meeting.onrender.com');
 
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
