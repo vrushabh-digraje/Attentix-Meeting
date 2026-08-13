@@ -50,10 +50,11 @@ export class WebRTCHandler {
     }
 
     initialize(): void {
-        const socketUrl = (import.meta as any).env.VITE_API_URL || 
+        const rawSocketUrl = (import.meta as any).env.VITE_API_URL || 
             (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
                 ? 'http://127.0.0.1:5000' 
                 : 'https://attentix-meeting.onrender.com');
+        const socketUrl = rawSocketUrl.endsWith('/') ? rawSocketUrl.slice(0, -1) : rawSocketUrl;
         // Connect to Socket.IO signaling server
         this.socket = io(socketUrl);
 
