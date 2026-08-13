@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusGuard - Usage Reports</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandBg: '#090d16',
+                        brandNav: 'rgba(15, 23, 42, 0.8)',
+                        zoomBlue: '#0E71EB',
+                        zoomBlueHover: '#0b5cbF',
+                        zoomPanel: '#1e1e21',
+                        zoomCard: '#242428',
+                        zoomBorder: '#232326',
+                        stateGreen: '#10b981',
+                        stateYellow: '#f59e0b',
+                        stateRed: '#ef4444',
+                    },
+                    fontFamily: {
+                        sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Chart.js for real-time visualization graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="bg-brandBg text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Top Navigation Bar -->
+    <nav class="flex justify-between items-center px-8 py-4 border-b border-white/5 bg-brandNav backdrop-blur-md sticky top-0 z-50">
+        <div class="text-xl font-extrabold text-zoomBlue">
+            zoom<span class="text-xs text-slate-400 font-normal ml-3">Usage & Attention Reports</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold rounded-lg text-sm transition-all" id="btn-back-to-room">← Return to Room</button>
+            <span class="bg-white/5 border border-white/10 px-4 py-2 rounded-full text-xs text-slate-300 font-medium" id="user-display">Host</span>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Body with Split Layout (Left Panel vs Right Panel) -->
+    <div class="max-w-7xl mx-auto py-10 px-6 w-full flex-grow flex flex-col gap-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+            
+            <!-- 📋 LEFT PANEL: Participant Name & Attention Score Only -->
+            <div class="lg:col-span-1 bg-zoomPanel border border-white/5 p-6 rounded-2xl flex flex-col gap-4 lg:sticky lg:top-24 max-h-[calc(100vh-140px)] overflow-y-auto shadow-lg">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2 pb-3 border-b border-white/5">
+                    <span>👥</span> Live Scoreboard
+                </h3>
+                <div id="compact-scoreboard" class="flex flex-col gap-3">
+                    <span class="text-slate-500 text-xs">No active students.</span>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Main Charts, Matricies, and Incident logs -->
+            <div class="lg:col-span-3 flex flex-col gap-8">
+                
+                <!-- Header & Stats Summary -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                    <div>
+                        <h2 id="dashboard-room-title" class="text-2xl font-extrabold tracking-tight">Meeting Room</h2>
+                        <p class="text-slate-400 text-xs mt-1">Classroom engagement metrics & continuous attention analysis.</p>
+                    </div>
+                    
+                    <div class="flex gap-4 w-full sm:w-auto">
+                        <div class="glass-panel px-5 py-3.5 rounded-xl flex-grow sm:flex-grow-0 text-center min-w-[130px]">
+                            <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Active Users</span>
+                            <h3 id="class-students-count" class="text-2xl font-extrabold text-zoomBlue mt-1">0</h3>
+                        </div>
+                        <div class="glass-panel px-5 py-3.5 rounded-xl flex-grow sm:flex-grow-0 text-center min-w-[130px]">
+                            <span class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Average Attention</span>
+                            <h3 id="class-avg-score" class="text-2xl font-extrabold text-stateGreen mt-1">0%</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytical Charts Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between h-[320px]">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Class Attention Trend</h3>
+                        <div class="relative flex-grow h-[220px]">
+                            <canvas id="attention-trend-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between h-[320px]">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">State Distribution</h3>
+                        <div class="relative flex-grow h-[220px] flex justify-center">
+                            <canvas id="attention-state-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Participant Card Grid -->
+                <div>
+                    <h3 class="text-base font-bold text-slate-200 mb-4">Detailed Participant Matrix</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6" id="participants-matrix-grid">
+                        <p id="no-participants-msg" class="text-slate-500 text-center w-full py-8 text-xs col-span-full">No active participants in room yet.</p>
+                    </div>
+                </div>
+
+                <!-- System Alerts History Logs Table -->
+                <div class="glass-panel p-6 rounded-2xl">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Distraction Logs & Incident Records</h3>
+                    
+                    <div class="overflow-x-auto w-full">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-white/5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                    <th class="py-3 px-4">Student</th>
+                                    <th class="py-3 px-4">Incident State</th>
+                                    <th class="py-3 px-4">Attention Score</th>
+                                    <th class="py-3 px-4">Warnings</th>
+                                    <th class="py-3 px-4">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body" class="divide-y divide-white/5 text-xs">
+                                <!-- Table rows generated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Critical Warning Alert Modal popup (Overlay on top of dashboard) -->
+    <div class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden" id="critical-alert-modal">
+        <div class="glass-panel p-8 rounded-2xl border border-stateRed shadow-2xl shadow-stateRed/25 max-w-sm w-full text-center mx-4">
+            <div class="w-14 h-14 rounded-full bg-stateRed/15 text-stateRed flex items-center justify-center text-2xl mx-auto mb-4 animate-ping">⚠️</div>
+            <h3 class="text-stateRed font-extrabold text-xl tracking-wide mb-3">CRITICAL ALERT</h3>
+            <p id="critical-alert-msg" class="text-slate-300 leading-relaxed text-xs mb-6"></p>
+            <button class="w-full py-2.5 rounded-lg bg-stateRed hover:bg-red-600 text-white font-bold transition-all text-sm" id="btn-close-critical-modal">Acknowledge Alert</button>
+        </div>
+    </div>
+
+    <script src="js/charts.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

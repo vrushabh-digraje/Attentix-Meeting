@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Meeting</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        zoomDarkBg: '#0e0f11',
+                        zoomCard: '#1a1a1c',
+                        zoomControlBar: '#18181a',
+                        zoomBlue: '#0E71EB',
+                        zoomGreen: '#30AB4C',
+                        zoomRed: '#E02B2B',
+                        zoomBorder: '#232326',
+                        zoomTextSec: '#a2a2a7'
+                    },
+                    fontFamily: {
+                        sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Include MediaPipe FaceMesh & Camera Helpers -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <!-- Include Socket.IO client -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body class="bg-zoomDarkBg text-slate-100 min-h-screen flex flex-col font-sans overflow-hidden select-none">
+
+    <!-- Top Overlay Room Info (Simulating Zoom's green lock shield header) -->
+    <div class="absolute top-4 left-6 z-50 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm border border-white/5">
+        <span class="text-zoomGreen text-sm">🛡️</span>
+        <span class="text-slate-300">Zoom Meeting</span>
+        <span class="text-white/20">|</span>
+        <span id="room-code-tag" class="text-zoomTextSec font-mono"></span>
+    </div>
+
+    <!-- Main Webcam Video Workspace (Gallery View grid) -->
+    <div class="relative flex-grow flex items-center justify-center p-6 h-[calc(100vh-70px)] overflow-hidden">
+        <!-- Live Video Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-6xl justify-center items-center" id="video-grid">
+            
+            <!-- Local Video Feed Box -->
+            <div class="relative aspect-video bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden shadow-lg transition-all duration-300" id="local-video-box">
+                <video id="local-video" class="w-full h-full object-cover transform scale-x-[-1]" autoplay playsinline muted></video>
+                
+                <!-- Label bottom left (Zoom style) -->
+                <div class="absolute bottom-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[11px] font-medium tracking-wide">
+                    You
+                </div>
+                
+                <!-- Hidden Canvas Overlay for Landmark Engine processing -->
+                <canvas class="absolute top-0 left-0 w-full h-full pointer-events-none" id="landmark-canvas"></canvas>
+            </div>
+
+            <!-- Remote Peer Video boxes will be inserted dynamically here -->
+        </div>
+
+        <!-- Warning Alert popup (Bottom-left zoom toast notification) -->
+        <div class="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-[#242428]/95 shadow-2xl z-50 flex flex-col items-center text-center hidden" id="warning-popup">
+            <div class="text-zoomRed text-xl mb-1">⚠️</div>
+            <h3 class="text-zoomRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>
+            <p class="text-slate-300 text-xs leading-relaxed mb-4" id="warning-popup-msg">Please look back at the camera to restore focus.</p>
+            <button id="btn-close-warning" class="w-full py-2 bg-zoomDarkBg hover:bg-zoomCard border border-white/10 text-slate-300 hover:text-white rounded-lg font-bold text-[11px] transition-all">Dismiss Warning</button>
+        </div>
+    </div>
+
+    <!-- Zoom Control Bar (Bottom toolbar) -->
+    <div class="h-[70px] bg-zoomControlBar border-t border-zoomBorder flex justify-between items-center px-6 z-50">
+        
+        <!-- Left: Audio / Video Controls -->
+        <div class="flex items-center gap-1">
+            <button class="flex flex-col items-center justify-center w-16 h-12 rounded hover:bg-white/5 text-slate-300 hover:text-white transition-all" id="btn-toggle-audio">
+                <span class="text-lg">🎙️</span>
+                <span class="text-[9px] font-semibold tracking-wide mt-0.5">Mute</span>
+            </button>
+            <button class="flex flex-col items-center justify-center w-16 h-12 rounded hover:bg-white/5 text-slate-300 hover:text-white transition-all" id="btn-toggle-video">
+                <span class="text-lg">📹</span>
+                <span class="text-[9px] font-semibold tracking-wide mt-0.5">Stop Video</span>
+            </button>
+        </div>
+        
+        <!-- Center: Meeting Controls -->
+        <div class="flex items-center gap-1">
+            <!-- Invite Button -->
+            <button class="flex flex-col items-center justify-center w-16 h-12 rounded hover:bg-white/5 text-slate-300 hover:text-white transition-all" id="btn-invite">
+                <span class="text-lg">👤+</span>
+                <span class="text-[9px] font-semibold tracking-wide mt-0.5">Invite</span>
+            </button>
+            <!-- Participants Button -->
+            <button class="flex flex-col items-center justify-center w-16 h-12 rounded hover:bg-white/5 text-slate-300 hover:text-white transition-all relative">
+                <span class="text-lg">👥</span>
+                <span class="text-[9px] font-semibold tracking-wide mt-0.5">Participants</span>
+            </button>
+            <!-- Share Screen (Signature Zoom Green button) -->
+            <button class="flex flex-col items-center justify-center w-16 h-12 rounded hover:bg-white/5 text-zoomGreen hover:text-green-400 transition-all">
+                <span class="text-lg">📤</span>
+                <span class="text-[9px] font-semibold tracking-wide mt-0.5">Share Screen</span>
+            </button>
+            
+            <!-- Host Dashboard Button (Green pill, shown for host only) -->
+            <div class="hidden ml-4" id="host-controls">
+                <button class="px-4 py-2 rounded bg-zoomBlue hover:bg-zoomBlueHover text-white text-xs font-bold transition-all" id="btn-open-dashboard">📊 Usage Reports</button>
+            </div>
+        </div>
+        
+        <!-- Right: Leave / End Meeting -->
+        <div>
+            <button class="px-4 py-1.5 rounded bg-zoomRed hover:bg-red-600 text-white text-xs font-bold transition-all" id="btn-leave-meeting">End</button>
+        </div>
+    </div>
+
+    <!-- Hidden indicator components to avoid JS crash -->
+    <div style="display: none;">
+        <span id="gauge-score-value">0%</span>
+        <span id="gauge-status-label">Attentive</span>
+        <circle id="gauge-fill-arc"></circle>
+        <span id="ear-value">0</span>
+        <span id="gaze-value">0</span>
+        <span id="head-pose-value">0</span>
+        <span id="warnings-count-value">0</span>
+        <div id="warning-log-list"></div>
+    </div>
+
+    <script src="js/attention_engine.js"></script>
+    <script src="js/webrtc_handler.js"></script>
+    <script src="js/meeting.js"></script>
+</body>
+</html>

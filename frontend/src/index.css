@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(30, 30, 33, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .premium-bg {
+    background: radial-gradient(circle at top left, #121318 0%, #09090b 50%, #050507 100%);
+  }
+
+  .premium-glow-blue {
+    box-shadow: 0 0 20px rgba(14, 113, 235, 0.15);
+  }
+
+  .premium-glow-orange {
+    box-shadow: 0 0 20px rgba(224, 87, 19, 0.15);
+  }
+
+  .gradient-text-blue {
+    background: linear-gradient(135deg, #0e71eb 0%, #4295f4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-text-orange {
+    background: linear-gradient(135deg, #e05713 0%, #ff8243 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .btn-premium-orange {
+    background: linear-gradient(135deg, #e05713 0%, #f97316 100%);
+    box-shadow: 0 4px 15px rgba(224, 87, 19, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-premium-orange:hover {
+    background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
+    box-shadow: 0 6px 20px rgba(224, 87, 19, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-premium-blue {
+    background: linear-gradient(135deg, #0e71eb 0%, #3b82f6 100%);
+    box-shadow: 0 4px 15px rgba(14, 113, 235, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-premium-blue:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #60a5fa 100%);
+    box-shadow: 0 6px 20px rgba(14, 113, 235, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .premium-card {
+    background: rgba(26, 26, 28, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .premium-card:hover {
+    background: rgba(30, 30, 33, 0.6);
+    border-color: rgba(14, 113, 235, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+  }
+}

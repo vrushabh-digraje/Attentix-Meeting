@@ -1,0 +1,870 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, Video as VideoIcon, VideoOff, Share2, Users, AlertTriangle, LogOut } from 'lucide-react';
+import { UserSession, MeetingSession } from '../App';
+import { AttentionEngine } from '../utils/attentionEngine';
+import { WebRTCHandler } from '../utils/webrtcHandler';
+
+interface MeetingProps {
+    user: UserSession;
+    meeting: MeetingSession;
+    onLeave: () => void;
+    onOpenDashboard: () => void;
+}
+
+interface RemotePeer {
+    peerName: string;
+    stream: MediaStream;
+}
+
+const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboard }) => {
+    const apiBase = window.location.origin;
+
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Media states
+    const [audioEnabled, setAudioEnabled] = useState<boolean>(true);
+    const [videoEnabled, setVideoEnabled] = useState<boolean>(true);
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remotePeers, setRemotePeers] = useState<{ [key: number]: RemotePeer }>({});
+    const [pinnedPeerId, setPinnedPeerId] = useState<string | number>('local');
+    const [remoteCameras, setRemoteCameras] = useState<{ [key: number]: boolean }>({});
+
+    // Warning states
+    const [showWarning, setShowWarning] = useState<boolean>(false);
+    const [warningCount, setWarningCount] = useState<number>(0);
+    const [warningMsg, setWarningMsg] = useState<string>('');
+    const [showParticipantsSidebar, setShowParticipantsSidebar] = useState<boolean>(false);
+    const [showScoreboard, setShowScoreboard] = useState<boolean>(true);
+    const [participantScores, setParticipantScores] = useState<{ [key: number]: { username: string, score: number } }>({});
+    
+    // Screen sharing & Chat states
+    const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
+    const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState<string>('');
+    const [showChatSidebar, setShowChatSidebar] = useState<boolean>(false);
+    const [studentWarningsAlert, setStudentWarningsAlert] = useState<{ username: string, user_id: number } | null>(null);
+
+    // Refs to avoid state updates lagging inside callbacks
+    const consecutiveDistractions = useRef<number>(0);
+    const warningCountRef = useRef<number>(0);
+    const lastLogTime = useRef<number>(0);
+
+    const webrtcHandlerRef = useRef<WebRTCHandler | null>(null);
+    const attentionEngineRef = useRef<AttentionEngine | null>(null);
+
+    // Synthesize warning alert sound
+    const playWarningBeep = () => {
+        try {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+            const audioCtx = new AudioContextClass();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        } catch (e) {
+            console.warn('Audio warning blocked by browser context');
+        }
+    };
+
+    // 1. Mount Camera Stream & start P2P WebRTC connection instantly
+    useEffect(() => {
+        let activeStream: MediaStream | null = null;
+
+        const startMeetingMedia = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 },
+                    audio: true
+                });
+                activeStream = stream;
+                setLocalStream(stream);
+
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = stream;
+                }
+
+                // Initialize WebRTC signaling handshakes
+                const handler = new WebRTCHandler(
+                    String(meeting.meetingId),
+                    user.id,
+                    user.username,
+                    stream,
+                    (peerId, peerName, remoteStream) => {
+                        setRemotePeers(prev => ({
+                            ...prev,
+                            [peerId]: { peerName, stream: remoteStream }
+                        }));
+                    },
+                    (peerId) => {
+                        setRemotePeers(prev => {
+                            const copy = { ...prev };
+                            delete copy[peerId];
+                            return copy;
+                        });
+                    }
+                );
+
+                handler.initialize();
+                webrtcHandlerRef.current = handler;
+
+                // Listen for host kick events
+                if (handler.socket) {
+                    handler.socket.on('participant-kicked', (data: any) => {
+                        if (data.user_id === user.id) {
+                            alert("You have been removed from the meeting by the host.");
+                            onLeave();
+                        }
+                    });
+
+                    handler.socket.on('camera-state-change', (data: any) => {
+                        setRemoteCameras(prev => ({
+                            ...prev,
+                            [data.user_id]: data.enabled
+                        }));
+                    });
+
+                    handler.socket.on('attention-score-update', (data: any) => {
+                        setParticipantScores(prev => ({
+                            ...prev,
+                            [data.user_id]: {
+                                username: data.username,
+                                score: data.score
+                            }
+                        }));
+                    });
+
+                    handler.socket.on('chat-message', (data: any) => {
+                        setChatMessages(prev => [...prev, data]);
+                    });
+
+                    handler.socket.on('warning-limit-reached', (data: any) => {
+                        setStudentWarningsAlert(data);
+                    });
+                }
+
+            } catch (err: any) {
+                alert("Camera and microphone access are required: " + err.message);
+                onLeave();
+            }
+        };
+
+        startMeetingMedia();
+
+        return () => {
+            if (activeStream) {
+                activeStream.getTracks().forEach(track => track.stop());
+            }
+            if (webrtcHandlerRef.current) {
+                webrtcHandlerRef.current.leave();
+            }
+        };
+    }, [meeting.meetingId]);
+
+    // 2. Start local Attention Tracking asynchronously in background
+    useEffect(() => {
+        if (!localStream) return;
+
+        const engine = new AttentionEngine();
+        attentionEngineRef.current = engine;
+
+        if (localVideoRef.current && canvasRef.current) {
+            engine.initialize(localVideoRef.current, canvasRef.current, (results) => {
+                handleAttentionResults(results);
+            }).then(() => {
+                console.log("Local MediaPipe attention calculations running silently in background.");
+            }).catch(err => {
+                console.error("MediaPipe failed to load in background: ", err);
+            });
+        }
+
+        return () => {
+            if (attentionEngineRef.current) {
+                attentionEngineRef.current.stop();
+            }
+        };
+    }, [localStream]);
+
+    // Bind local stream to video ref whenever localStream, pinnedPeerId, or screen share status changes
+    useEffect(() => {
+        if (localVideoRef.current) {
+            if (isScreenSharing && screenStream) {
+                localVideoRef.current.srcObject = screenStream;
+            } else if (localStream) {
+                localVideoRef.current.srcObject = localStream;
+            }
+        }
+        if (attentionEngineRef.current && localVideoRef.current && canvasRef.current) {
+            // Update media elements reference if video tag mounts to new place
+            attentionEngineRef.current.video = localVideoRef.current;
+            attentionEngineRef.current.canvas = canvasRef.current;
+            attentionEngineRef.current.ctx = canvasRef.current.getContext('2d');
+        }
+    }, [localStream, pinnedPeerId, isScreenSharing, screenStream]);
+
+    // Handle incoming attention scores
+    const handleAttentionResults = (results: any) => {
+        if (isScreenSharing) {
+            consecutiveDistractions.current = 0;
+            setShowWarning(false);
+            return;
+        }
+
+        const score = results.attentionScore;
+        const state = results.state;
+
+        if (meeting.role === 'host') {
+            setParticipantScores(prev => ({
+                ...prev,
+                [user.id]: {
+                    username: "You (Host)",
+                    score: Math.round(score * 100)
+                }
+            }));
+        }
+
+        // Local Warning Alert Counter logic
+        if (state !== 'Attentive' && results.detected) {
+            consecutiveDistractions.current++;
+            // 20 consecutive frames (~2 seconds) of distraction triggers alert
+            if (consecutiveDistractions.current === 20) {
+                triggerInattentionWarning(state);
+            }
+        } else {
+            consecutiveDistractions.current = 0;
+            setShowWarning(false);
+        }
+
+        // Send logs to FastAPI (Debounced to once every 3 seconds)
+        const now = Date.now();
+        if (now - lastLogTime.current > 3000) {
+            lastLogTime.current = now;
+            sendLogToBackend(score, state);
+        }
+    };
+
+    const triggerInattentionWarning = (state: string) => {
+        if (warningCountRef.current >= 3) return; // Locked at max 3 warnings
+        
+        warningCountRef.current++;
+        setWarningCount(warningCountRef.current);
+        playWarningBeep();
+
+        if (warningCountRef.current === 3) {
+            setWarningMsg("FINAL WARNING: You have reached 3 warnings. The Host has been notified.");
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('warning-limit-reached', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username
+                });
+            }
+        } else {
+            setWarningMsg(`Please look back at the camera to restore focus. (Warning ${warningCountRef.current} of 3)`);
+        }
+        setShowWarning(true);
+    };
+
+    const sendLogToBackend = async (score: number, state: string) => {
+        try {
+            await fetch(`${apiBase}/api/attention/log`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    attention_score: score,
+                    state: state,
+                    warnings_count: warningCountRef.current
+                })
+            });
+
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('attention-score-update', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username,
+                    score: Math.round(score * 100)
+                });
+            }
+        } catch (e) {
+            console.error('Failed to log attention data:', e);
+        }
+    };
+
+    // Toggle Audio
+    const handleToggleAudio = () => {
+        if (localStream) {
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = !audioTrack.enabled;
+                setAudioEnabled(audioTrack.enabled);
+            }
+        }
+    };
+
+    // Toggle Video
+    const handleToggleVideo = () => {
+        if (localStream) {
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                setVideoEnabled(videoTrack.enabled);
+                
+                // Broadcast state to other participants
+                if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                    webrtcHandlerRef.current.socket.emit('camera-state-change', {
+                        meeting_id: meeting.meetingId,
+                        user_id: user.id,
+                        enabled: videoTrack.enabled
+                    });
+                }
+            }
+        }
+    };
+
+    // Copy Invite Link
+    const handleCopyInviteLink = () => {
+        const inviteLink = `${window.location.origin}/index.html?room=${meeting.roomCode}`;
+        navigator.clipboard.writeText(inviteLink).then(() => {
+            alert(`Invite Link copied to clipboard! Send this link to participants to let them join directly:\n${inviteLink}`);
+        }).catch(() => {
+            alert(`Invite Code: ${meeting.roomCode}`);
+        });
+    };
+
+    // Toggle Screen Share
+    const handleToggleScreenShare = async () => {
+        if (!isScreenSharing) {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const screenTrack = stream.getVideoTracks()[0];
+                
+                if (webrtcHandlerRef.current) {
+                    webrtcHandlerRef.current.replaceVideoTrack(screenTrack);
+                }
+                
+                setScreenStream(stream);
+                setIsScreenSharing(true);
+                
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = stream;
+                }
+                
+                screenTrack.onended = () => {
+                    stopScreenShare(stream);
+                };
+            } catch (err) {
+                console.error("Failed to share screen:", err);
+            }
+        } else {
+            if (screenStream) {
+                stopScreenShare(screenStream);
+            }
+        }
+    };
+
+    const stopScreenShare = (stream: MediaStream) => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (localStream) {
+            const originalTrack = localStream.getVideoTracks()[0];
+            if (webrtcHandlerRef.current && originalTrack) {
+                webrtcHandlerRef.current.replaceVideoTrack(originalTrack);
+            }
+            if (localVideoRef.current) {
+                localVideoRef.current.srcObject = localStream;
+            }
+        }
+        setScreenStream(null);
+        setIsScreenSharing(false);
+    };
+
+    // Chat Message Submit
+    const handleSendChatMessage = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!chatInput.trim()) return;
+        
+        if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('chat-message', {
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                username: user.username,
+                message: chatInput.trim()
+            });
+            setChatInput('');
+        }
+    };
+
+    // Dismiss Warning
+    const handleDismissWarning = () => {
+        consecutiveDistractions.current = 0;
+        setShowWarning(false);
+    };
+
+    // Kick Participant
+    const handleKickParticipant = (peerId: number) => {
+        if (confirm("Are you sure you want to kick this participant?")) {
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('kick-participant', {
+                    meeting_id: meeting.meetingId,
+                    user_id: peerId
+                });
+            }
+        }
+    };
+
+    const peerIds = Object.keys(remotePeers).map(Number);
+    const hasRemote = peerIds.length > 0;
+    
+    // Determine active pin
+    let activePin: string | number = 'local';
+    if (pinnedPeerId !== 'local' && remotePeers[pinnedPeerId as number]) {
+        activePin = pinnedPeerId;
+    } else if (hasRemote && pinnedPeerId === 'local') {
+        // Default to first remote peer if there are any
+        activePin = peerIds[0];
+    }
+
+    return (
+        <div className="bg-zoomDarkBg text-slate-100 min-h-screen flex flex-col font-sans overflow-hidden select-none relative">
+            
+            {/* Host Alert: Participant Inattention Toast (Renders top center) */}
+            {meeting.role === 'host' && studentWarningsAlert && (
+                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 w-[400px] max-w-[90vw] bg-[#2d1b1e] border-2 border-zoomRed p-4 rounded-xl shadow-2xl z-[100] flex flex-col gap-2 animate-bounce">
+                    <div className="flex items-center gap-2 text-zoomRed font-extrabold text-xs uppercase tracking-widest">
+                        <AlertTriangle size={16} /> Attention Alert Notification
+                    </div>
+                    <p className="text-slate-200 text-[11.5px] leading-relaxed">
+                        Student <span className="font-bold text-white underline">{studentWarningsAlert.username}</span> has received <span className="text-zoomRed font-black">3 inattention warnings</span> during this meeting!
+                    </p>
+                    <div className="flex justify-end gap-2 mt-1">
+                        <button 
+                            onClick={() => {
+                                handleKickParticipant(studentWarningsAlert.user_id);
+                                setStudentWarningsAlert(null);
+                            }}
+                            className="px-3 py-1 bg-zoomRed hover:bg-red-600 text-white rounded text-[10px] font-bold transition-all"
+                        >
+                            Kick Student
+                        </button>
+                        <button 
+                            onClick={() => setStudentWarningsAlert(null)}
+                            className="px-3 py-1 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded text-[10px] font-bold transition-all"
+                        >
+                            Dismiss Alert
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Green Lock Shield Info Overlay */}
+            <div className="absolute top-4 left-6 z-40 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm border border-white/5">
+                <span className="text-zoomGreen text-sm">🛡️</span>
+                <span className="text-slate-300">Attentix Meeting</span>
+                <span className="text-white/20">|</span>
+                <span className="text-zoomTextSec font-mono">
+                    Room: {meeting.roomCode.slice(0,3)}-{meeting.roomCode.slice(3,6)}-{meeting.roomCode.slice(6,9)}
+                </span>
+            </div>
+
+            {/* Video Workspace (Speaker View layout: Horizontal thumbnails + Pinned Big Video) */}
+            <div className="relative flex-grow flex h-[calc(100vh-70px)] overflow-hidden bg-zoomDarkBg">
+                
+                {/* Left Side: Host-Only Attention Scoreboard */}
+                {meeting.role === 'host' && showScoreboard && (
+                    <div className="w-64 border-r border-zoomBorder bg-zoomPanel/60 backdrop-blur-md flex flex-col shrink-0 h-full z-20">
+                        <div className="p-4 border-b border-zoomBorder bg-[#18181a]/90">
+                            <h3 className="font-bold text-xs text-zoomOrange uppercase tracking-widest flex items-center gap-1.5">
+                                📊 Attention Scoreboard
+                            </h3>
+                            <p className="text-[9px] text-zoomTextSec mt-1 leading-snug">Real-time engagement scores of all participants</p>
+                        </div>
+                        
+                        <div className="flex-grow overflow-y-auto p-4 space-y-2">
+                            {Object.entries(participantScores).filter(([pId]) => Number(pId) !== user.id).length === 0 ? (
+                                <div className="text-center py-8 text-zoomTextSec text-[10px]">
+                                    Waiting for attention score updates...
+                                </div>
+                            ) : (
+                                Object.entries(participantScores)
+                                    .filter(([pId]) => Number(pId) !== user.id)
+                                    .map(([pId, scoreData]) => {
+                                        const scorePct = scoreData.score;
+                                        let progressColor = 'bg-stateGreen';
+                                        let textColor = 'text-stateGreen';
+                                        if (scorePct < 40) {
+                                            progressColor = 'bg-stateRed';
+                                            textColor = 'text-stateRed';
+                                        } else if (scorePct < 70) {
+                                            progressColor = 'bg-stateYellow';
+                                            textColor = 'text-stateYellow';
+                                        }
+                                        
+                                        return (
+                                            <div key={pId} className="bg-zoomCard/60 border border-white/5 p-3 rounded-lg flex flex-col gap-1.5 shadow-sm">
+                                                <div className="flex justify-between items-center text-[11px] font-bold text-white">
+                                                    <span className="truncate max-w-[145px]">{scoreData.username}</span>
+                                                    <span className={`${textColor} font-mono`}>{scorePct}%</span>
+                                                </div>
+                                                <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                                    <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${scorePct}%` }}></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Left Area: Video feeds */}
+                <div className="flex-grow flex flex-col overflow-hidden h-full">
+                    {/* Thumbnails Row (Top horizontal scrolling list) */}
+                    {hasRemote && (
+                        <div className="h-32 bg-[#141416]/50 border-b border-zoomBorder flex items-center gap-3 px-6 overflow-x-auto select-none py-2 shrink-0">
+                            
+                            {/* Render Local video as thumbnail if not pinned */}
+                            {activePin !== 'local' && (
+                                <div 
+                                    onClick={() => setPinnedPeerId('local')}
+                                    className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-24 max-sm:h-36 max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
+                                >
+                                    <video 
+                                        ref={localVideoRef} 
+                                        className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                        autoPlay 
+                                        playsInline 
+                                        muted 
+                                    />
+                                    {!videoEnabled && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-[#1c1c1e]">
+                                            <div className="w-10 h-10 rounded-full bg-zoomBlue text-white font-bold flex items-center justify-center text-sm border border-white/10 animate-pulse">
+                                                {user.username.charAt(0).toUpperCase()}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-[9px] font-medium z-10">
+                                        You
+                                    </div>
+                                    <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
+                                </div>
+                            )}
+
+                            {/* Render Remote videos as thumbnails */}
+                            {peerIds.map(peerId => {
+                                if (peerId === activePin) return null; // don't show active pin in thumbnails
+                                const peerObj = remotePeers[peerId];
+                                const isCamOn = remoteCameras[peerId] !== false;
+                                return (
+                                    <div 
+                                        key={peerId}
+                                        onClick={() => setPinnedPeerId(peerId)}
+                                        className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
+                                    >
+                                        {isCamOn ? (
+                                            <video 
+                                                autoPlay 
+                                                playsInline 
+                                                ref={el => { if (el) el.srcObject = peerObj.stream; }} 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-[#1c1c1e]">
+                                                <div className="w-10 h-10 rounded-full bg-zoomCard border border-zoomBorder text-white font-bold flex items-center justify-center text-sm">
+                                                    {peerObj.peerName.charAt(0).toUpperCase()}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-[9px] font-medium">
+                                            {peerObj.peerName}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Big Viewport (Active Pinned Video) */}
+                    <div className="flex-grow flex items-center justify-center p-4 relative bg-[#0e0f11]">
+                        {activePin === 'local' ? (
+                            <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                                <video 
+                                    ref={localVideoRef} 
+                                    className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                    autoPlay 
+                                    playsInline 
+                                    muted 
+                                />
+                                {!videoEnabled && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1c1c1e]">
+                                        <div className="w-20 h-20 rounded-full bg-zoomBlue text-white font-black flex items-center justify-center text-3xl border border-white/10 shadow-lg animate-pulse">
+                                            {user.username.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className="text-xs text-slate-400 font-semibold tracking-wide">Camera Off</span>
+                                    </div>
+                                )}
+                                <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold z-10">
+                                    You (Pinned)
+                                </div>
+                                <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
+                            </div>
+                        ) : (
+                            remotePeers[activePin as number] && (
+                                <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                                    {remoteCameras[activePin as number] !== false ? (
+                                        <video 
+                                            autoPlay 
+                                            playsInline 
+                                            ref={el => { if (el) el.srcObject = remotePeers[activePin as number].stream; }} 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1c1c1e]">
+                                            <div className="w-20 h-20 rounded-full bg-zoomCard border border-zoomBorder text-white font-black flex items-center justify-center text-3xl shadow-lg">
+                                                {remotePeers[activePin as number].peerName.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-semibold tracking-wide">Camera Off</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold">
+                                        {remotePeers[activePin as number].peerName}
+                                    </div>
+                                </div>
+                            )
+                        )}
+
+                        {/* Warning Alert Popup (Zoom notification toast at bottom-left) */}
+                        {showWarning && (
+                            <div className="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-[#242428]/95 shadow-2xl z-50 flex flex-col items-center text-center">
+                                <div className="text-zoomRed text-xl mb-1"><AlertTriangle /></div>
+                                <h3 className="text-zoomRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>
+                                <p className="text-slate-300 text-xs leading-relaxed mb-4">{warningMsg}</p>
+                                <button 
+                                    onClick={handleDismissWarning}
+                                    className="w-full py-2 bg-zoomDarkBg hover:bg-zoomCard border border-white/10 text-slate-300 hover:text-white rounded-lg font-bold text-[11px] transition-all"
+                                >
+                                    Dismiss Warning
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Area: Participants list panel */}
+                {showParticipantsSidebar && (
+                    <div className="w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-full z-40">
+                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-[#18181a]">
+                            <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <Users size={14} className="text-zoomBlue" /> Participants ({peerIds.length + 1})
+                            </h3>
+                            <button onClick={() => setShowParticipantsSidebar(false)} className="text-zoomTextSec hover:text-white text-xs font-semibold">✕</button>
+                        </div>
+                        
+                        <div className="flex-grow overflow-y-auto p-4 space-y-3">
+                            {/* Local User Box */}
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-white/5 shadow-md">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full bg-zoomBlue text-white font-bold flex items-center justify-center text-xs border border-white/10">
+                                        {user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-white leading-none">{user.username}</span>
+                                        <span className="text-[9px] text-zoomTextSec mt-0.5 font-medium uppercase tracking-wider">{meeting.role} (You)</span>
+                                    </div>
+                                </div>
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${videoEnabled ? 'bg-stateGreen/10 text-stateGreen' : 'bg-stateRed/10 text-stateRed'}`}>
+                                    {videoEnabled ? 'Camera On' : 'Camera Off'}
+                                </span>
+                            </div>
+
+                            {/* Remote Peers list */}
+                            {peerIds.map(peerId => {
+                                const peerObj = remotePeers[peerId];
+                                const isCamOn = remoteCameras[peerId] !== false;
+                                return (
+                                    <div key={peerId} className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-white/5 shadow-md">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-full bg-[#2a2a2e] text-white font-bold flex items-center justify-center text-xs border border-white/10">
+                                                {peerObj.peerName.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold text-white leading-none">{peerObj.peerName}</span>
+                                                <span className="text-[9px] text-zoomTextSec mt-0.5 font-medium uppercase tracking-wider">Participant</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${isCamOn ? 'bg-stateGreen/10 text-stateGreen' : 'bg-stateRed/10 text-stateRed'}`}>
+                                                {isCamOn ? 'Camera On' : 'Camera Off'}
+                                            </span>
+                                            {meeting.role === 'host' && (
+                                                <button 
+                                                    onClick={() => handleKickParticipant(peerId)}
+                                                    className="text-[9px] text-zoomRed hover:underline font-bold px-1.5 py-0.5 rounded bg-stateRed/5 hover:bg-stateRed/15 border border-stateRed/20 transition-all ml-1"
+                                                >
+                                                    Kick
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Right Area: Chat Sidebar Panel */}
+                {showChatSidebar && (
+                    <div className="w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-full z-40">
+                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-[#18181a]">
+                            <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                                💬 Meeting Chat
+                            </h3>
+                            <button onClick={() => setShowChatSidebar(false)} className="text-zoomTextSec hover:text-white text-xs font-semibold">✕</button>
+                        </div>
+                        
+                        <div className="flex-grow overflow-y-auto p-4 space-y-3 flex flex-col">
+                            {chatMessages.length === 0 ? (
+                                <div className="text-center text-zoomTextSec text-[10px] my-auto">
+                                    No messages yet. Send a message to start the chat!
+                                </div>
+                            ) : (
+                                chatMessages.map((msg, index) => {
+                                    const isSelf = msg.user_id === user.id;
+                                    return (
+                                        <div key={index} className={`flex flex-col max-w-[85%] ${isSelf ? 'self-end items-end' : 'self-start items-start'}`}>
+                                            <span className="text-[8px] text-zoomTextSec mb-0.5 font-semibold">
+                                                {isSelf ? "You" : msg.username} • {msg.timestamp}
+                                            </span>
+                                            <div className={`p-2.5 rounded-lg text-xs leading-normal ${isSelf ? 'bg-zoomBlue text-white rounded-tr-none' : 'bg-zoomCard border border-white/5 text-slate-100 rounded-tl-none'}`}>
+                                                {msg.message}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <form onSubmit={handleSendChatMessage} className="p-4 border-t border-zoomBorder bg-[#18181a] flex gap-2">
+                            <input 
+                                type="text"
+                                value={chatInput}
+                                onChange={e => setChatInput(e.target.value)}
+                                placeholder="Type message..."
+                                className="flex-grow px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-xs text-white outline-none focus:border-zoomBlue"
+                            />
+                            <button type="submit" className="px-3 py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white rounded-lg text-xs font-bold transition-all">
+                                        Send
+                            </button>
+                        </form>
+                    </div>
+                )}
+            </div>
+
+                {/* Bottom Controls bar */}
+            <div className="h-[75px] bg-[#18181a] border-t border-zoomBorder flex justify-between items-center px-8 z-50">
+                
+                {/* Audio/Video */}
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={handleToggleAudio}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
+                    >
+                        {audioEnabled ? <Mic size={18} /> : <MicOff size={18} />}
+                    </button>
+                    <button 
+                        onClick={handleToggleVideo}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        title={videoEnabled ? "Stop Camera" : "Start Camera"}
+                    >
+                        {videoEnabled ? <VideoIcon size={18} /> : <VideoOff size={18} />}
+                    </button>
+                </div>
+
+                {/* Center tools */}
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={handleCopyInviteLink}
+                        className="w-11 h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all"
+                        title="Copy Invite Link"
+                    >
+                        <Share2 size={18} />
+                    </button>
+                    <button 
+                        onClick={handleToggleScreenShare}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
+                    >
+                        <span className="text-base">🖥️</span>
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setShowChatSidebar(!showChatSidebar);
+                            setShowParticipantsSidebar(false);
+                        }}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        title="Open Chat"
+                    >
+                        <span className="text-base">💬</span>
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setShowParticipantsSidebar(!showParticipantsSidebar);
+                            setShowChatSidebar(false);
+                        }}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        title="Show Participants"
+                    >
+                        <Users size={18} />
+                        <span className="absolute -top-1 -right-1 bg-zoomBlue text-white text-[8px] px-1.5 rounded-full font-bold shadow-md">
+                            {peerIds.length + 1}
+                        </span>
+                    </button>
+                    
+                    {meeting.role === 'host' && (
+                        <button 
+                            onClick={() => setShowScoreboard(!showScoreboard)}
+                            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                            title="Toggle Scoreboard"
+                        >
+                            <span className="text-base">📊</span>
+                        </button>
+                    )}
+                    
+                    {meeting.role === 'host' && (
+                        <button 
+                            onClick={onOpenDashboard}
+                            className="ml-2 px-5 py-2.5 rounded-full bg-zoomBlue hover:bg-zoomBlueHover text-white text-xs font-bold transition-all shadow-lg hover:scale-[1.02]"
+                        >
+                            📊 Usage Reports
+                        </button>
+                    )}
+                </div>
+
+                {/* End / Leave button */}
+                <div>
+                    <button 
+                        onClick={() => {
+                            if (confirm("Leave this meeting session?")) {
+                                onLeave();
+                            }
+                        }}
+                        className="px-6 py-2 rounded-full bg-zoomRed hover:bg-red-600 text-white text-xs font-extrabold transition-all shadow-lg hover:scale-[1.02]"
+                    >
+                        Leave
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    );
+};
+
+export default Meeting;
