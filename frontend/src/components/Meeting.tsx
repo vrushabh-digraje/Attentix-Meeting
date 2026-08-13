@@ -224,7 +224,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 ...prev,
                 [user.id]: {
                     username: "You (Host)",
-                    score: Math.round(score * 100)
+                    score: Math.round(score)
                 }
             }));
         }
@@ -290,7 +290,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     meeting_id: meeting.meetingId,
                     user_id: user.id,
                     username: user.username,
-                    score: Math.round(score * 100)
+                    score: Math.round(score)
                 });
             }
         } catch (e) {
