@@ -181,22 +181,6 @@ def verify_google_token(id_token: str, client_id: Optional[str] = None) -> dict:
     except Exception as e:
         raise Exception(f"Google token verification failed: {str(e)}")
 
-@app.get("/api/debug-files")
-async def debug_files():
-    import os
-    file_structure = {}
-    try:
-        cur_dir = os.path.abspath(os.path.dirname(__file__))
-        file_structure["dirname"] = cur_dir
-        file_structure["exists_dist"] = os.path.exists(os.path.join(cur_dir, "dist"))
-        if file_structure["exists_dist"]:
-            file_structure["dist_contents"] = os.listdir(os.path.join(cur_dir, "dist"))
-        file_structure["parent_contents"] = os.listdir(os.path.join(cur_dir, "..")) if os.path.exists(os.path.join(cur_dir, "..")) else []
-        file_structure["backend_contents"] = os.listdir(cur_dir)
-    except Exception as e:
-        file_structure["error"] = str(e)
-    return file_structure
-
 @app.get("/api/auth/google/config")
 async def get_google_config():
     return {
