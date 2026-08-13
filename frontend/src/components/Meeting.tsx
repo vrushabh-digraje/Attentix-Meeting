@@ -233,11 +233,10 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }));
         }
 
-        // Local Warning Alert Counter logic
+        // Local Warning Alert Counter logic (Throttled: 6 frames ≈ 2 seconds at 3 FPS)
         if (state !== 'Attentive' && results.detected) {
             consecutiveDistractions.current++;
-            // 20 consecutive frames (~2 seconds) of distraction triggers alert
-            if (consecutiveDistractions.current === 20) {
+            if (consecutiveDistractions.current === 6) {
                 triggerInattentionWarning(state);
             }
         } else {

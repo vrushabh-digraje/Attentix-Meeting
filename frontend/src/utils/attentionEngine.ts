@@ -66,10 +66,15 @@ export class AttentionEngine {
 
         this.faceMesh.onResults((results: any) => this.processResults(results));
 
+        let lastFrameTime = 0;
         this.camera = new Camera(this.video, {
             onFrame: async () => {
-                if (this.faceMesh && this.video) {
-                    await this.faceMesh.send({ image: this.video });
+                const now = Date.now();
+                if (now - lastFrameTime >= 333) {
+                    lastFrameTime = now;
+                    if (this.faceMesh && this.video) {
+                        await this.faceMesh.send({ image: this.video });
+                    }
                 }
             },
             width: 640,
