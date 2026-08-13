@@ -80,6 +80,7 @@ export class WebRTCHandler {
                     meeting_id: this.meetingId,
                     sender_id: this.userId,
                     sender_username: this.username,
+                    target_id: peerId,
                     sdp: offer
                 });
             }
@@ -101,6 +102,7 @@ export class WebRTCHandler {
                 this.socket.emit('webrtc-answer', {
                     meeting_id: this.meetingId,
                     sender_id: this.userId,
+                    target_id: peerId,
                     sdp: answer
                 });
             }
@@ -152,6 +154,7 @@ export class WebRTCHandler {
                 this.socket.emit('ice-candidate', {
                     meeting_id: this.meetingId,
                     sender_id: this.userId,
+                    target_id: peerId,
                     candidate: event.candidate
                 });
             }

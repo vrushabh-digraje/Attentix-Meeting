@@ -668,6 +668,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         </div>
                         
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
+                            {/* Invite Option for Participants/Host */}
+                            <button 
+                                onClick={handleCopyInviteLink}
+                                className="w-full py-2.5 mb-4 bg-zoomBlue/15 hover:bg-zoomBlue/25 border border-zoomBlue/30 text-zoomBlue hover:text-white rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-2 shadow-sm"
+                            >
+                                <Share2 size={13} /> Copy Invite Link
+                            </button>
+
                             {/* Local User Box */}
                             <div className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-white/5 shadow-md">
                                 <div className="flex items-center gap-2">

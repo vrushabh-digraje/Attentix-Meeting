@@ -899,12 +899,16 @@ async def get_analytics(meeting_id: int):
         session.close()
 
 # Socket.IO Event Handlers (Asynchronous)
+user_sids = {}
+
 @sio.on('join-room')
 async def handle_join_room(sid, data):
     room = str(data.get('meeting_id'))
     user_id = data.get('user_id')
     username = data.get('username')
     
+    # Track socket connection mapping
+    user_sids[user_id] = sid
     await sio.enter_room(sid, room)
     # Notify other users in the room
     await sio.emit('peer-joined', {
@@ -938,28 +942,34 @@ async def handle_leave_room(sid, data):
 
 @sio.on('webrtc-offer')
 async def handle_webrtc_offer(sid, data):
-    room = str(data.get('meeting_id'))
-    await sio.emit('webrtc-offer', {
-        'sdp': data.get('sdp'),
-        'sender_id': data.get('sender_id'),
-        'sender_username': data.get('sender_username')
-    }, room=room, skip_sid=sid)
+    target_id = data.get('target_id')
+    target_sid = user_sids.get(target_id)
+    if target_sid:
+        await sio.emit('webrtc-offer', {
+            'sdp': data.get('sdp'),
+            'sender_id': data.get('sender_id'),
+            'sender_username': data.get('sender_username')
+        }, to=target_sid)
 
 @sio.on('webrtc-answer')
 async def handle_webrtc_answer(sid, data):
-    room = str(data.get('meeting_id'))
-    await sio.emit('webrtc-answer', {
-        'sdp': data.get('sdp'),
-        'sender_id': data.get('sender_id')
-    }, room=room, skip_sid=sid)
+    target_id = data.get('target_id')
+    target_sid = user_sids.get(target_id)
+    if target_sid:
+        await sio.emit('webrtc-answer', {
+            'sdp': data.get('sdp'),
+            'sender_id': data.get('sender_id')
+        }, to=target_sid)
 
 @sio.on('ice-candidate')
 async def handle_ice_candidate(sid, data):
-    room = str(data.get('meeting_id'))
-    await sio.emit('ice-candidate', {
-        'candidate': data.get('candidate'),
-        'sender_id': data.get('sender_id')
-    }, room=room, skip_sid=sid)
+    target_id = data.get('target_id')
+    target_sid = user_sids.get(target_id)
+    if target_sid:
+        await sio.emit('ice-candidate', {
+            'candidate': data.get('candidate'),
+            'sender_id': data.get('sender_id')
+        }, to=target_sid)
 
 @sio.on('kick-participant')
 async def handle_kick_participant(sid, data):
