@@ -167,9 +167,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         };
     }, [meeting.meetingId]);
 
-    // 2. Start local Attention Tracking asynchronously in background
+    // 2. Start local Attention Tracking asynchronously in background (Only for participants!)
     useEffect(() => {
-        if (!localStream) return;
+        if (!localStream || meeting.role === 'host') return;
 
         const engine = new AttentionEngine();
         attentionEngineRef.current = engine;
