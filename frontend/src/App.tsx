@@ -219,7 +219,7 @@ const App: React.FC = () => {
             sessionStorage.setItem('attentix_user', JSON.stringify(data.user));
             showLobby(data.user);
         } catch (err: any) {
-            setErrorMsg(err.message);
+            setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/login)`);
         }
     };
 
@@ -241,7 +241,7 @@ const App: React.FC = () => {
             setPassword('');
             setSuccessMsg('Registration successful! Please sign in.');
         } catch (err: any) {
-            setErrorMsg(err.message);
+            setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/register)`);
         }
     };
 
