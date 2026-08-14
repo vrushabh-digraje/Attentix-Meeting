@@ -25,10 +25,38 @@ interface ParticipantVideoProps {
 const ParticipantVideo: React.FC<ParticipantVideoProps> = ({ stream, className, muted }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-        }
+        const videoEl = videoRef.current;
+        if (!videoEl) return;
+
+        videoEl.srcObject = stream;
+        videoEl.play().catch(e => console.log("Play failed on bind", e));
+
+        const handleTrackEvent = () => {
+            console.log("Track change (mute/unmute/add/remove) detected on stream, refreshing srcObject");
+            if (videoEl) {
+                videoEl.srcObject = null;
+                videoEl.srcObject = stream;
+                videoEl.play().catch(e => console.log("Play failed on track change", e));
+            }
+        };
+
+        stream.addEventListener('addtrack', handleTrackEvent);
+        stream.addEventListener('removetrack', handleTrackEvent);
+        stream.getTracks().forEach(track => {
+            track.addEventListener('mute', handleTrackEvent);
+            track.addEventListener('unmute', handleTrackEvent);
+        });
+
+        return () => {
+            stream.removeEventListener('addtrack', handleTrackEvent);
+            stream.removeEventListener('removetrack', handleTrackEvent);
+            stream.getTracks().forEach(track => {
+                track.removeEventListener('mute', handleTrackEvent);
+                track.removeEventListener('unmute', handleTrackEvent);
+            });
+        };
     }, [stream]);
+
     return (
         <video 
             ref={videoRef} 
@@ -78,6 +106,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const consecutiveDistractions = useRef<number>(0);
     const warningCountRef = useRef<number>(0);
     const lastLogTime = useRef<number>(0);
+    const lastSocketEmitTime = useRef<number>(0);
 
     const webrtcHandlerRef = useRef<WebRTCHandler | null>(null);
     const attentionEngineRef = useRef<AttentionEngine | null>(null);
@@ -109,7 +138,11 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { width: 640, height: 480 },
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
                 });
                 activeStream = stream;
                 setLocalStream(stream);
@@ -268,11 +301,24 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             setShowWarning(false);
         }
 
-        // Send logs to FastAPI (Debounced to once every 3 seconds)
+        // Send logs to FastAPI (Debounced to once every 3 seconds to keep DB load low)
         const now = Date.now();
         if (now - lastLogTime.current > 3000) {
             lastLogTime.current = now;
             sendLogToBackend(score, state);
+        }
+
+        // Emit real-time attention score to socket (Debounced to once every 800ms for continuous updates)
+        if (now - lastSocketEmitTime.current > 800) {
+            lastSocketEmitTime.current = now;
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('attention-score-update', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username,
+                    score: Math.round(score)
+                });
+            }
         }
     };
 
@@ -311,15 +357,6 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     warnings_count: warningCountRef.current
                 })
             });
-
-            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
-                webrtcHandlerRef.current.socket.emit('attention-score-update', {
-                    meeting_id: meeting.meetingId,
-                    user_id: user.id,
-                    username: user.username,
-                    score: Math.round(score)
-                });
-            }
         } catch (e) {
             console.error('Failed to log attention data:', e);
         }
