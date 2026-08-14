@@ -16,6 +16,30 @@ interface RemotePeer {
     stream: MediaStream;
 }
 
+interface ParticipantVideoProps {
+    stream: MediaStream;
+    className?: string;
+    muted?: boolean;
+}
+
+const ParticipantVideo: React.FC<ParticipantVideoProps> = ({ stream, className, muted }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [stream]);
+    return (
+        <video 
+            ref={videoRef} 
+            className={className} 
+            autoPlay 
+            playsInline 
+            muted={muted} 
+        />
+    );
+};
+
 const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboard }) => {
     const rawApiBase = (import.meta as any).env.VITE_API_URL || 
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -572,10 +596,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
                                     >
                                         {isCamOn ? (
-                                            <video 
-                                                autoPlay 
-                                                playsInline 
-                                                ref={el => { if (el) el.srcObject = peerObj.stream; }} 
+                                            <ParticipantVideo 
+                                                stream={peerObj.stream} 
                                                 className="w-full h-full object-cover" 
                                             />
                                         ) : (
@@ -622,10 +644,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             remotePeers[activePin as number] && (
                                 <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                     {remoteCameras[activePin as number] !== false ? (
-                                        <video 
-                                            autoPlay 
-                                            playsInline 
-                                            ref={el => { if (el) el.srcObject = remotePeers[activePin as number].stream; }} 
+                                        <ParticipantVideo 
+                                            stream={remotePeers[activePin as number].stream} 
                                             className="w-full h-full object-cover" 
                                         />
                                     ) : (

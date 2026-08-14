@@ -10,6 +10,7 @@ export class WebRTCHandler {
 
     public socket: Socket | null = null;
     private peers: { [key: number]: RTCPeerConnection } = {};
+    private iceQueue: { [key: number]: any[] } = {};
     private readonly rtcConfig: RTCConfiguration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -110,6 +111,9 @@ export class WebRTCHandler {
                     sdp: answer
                 });
             }
+
+            // Process any ICE candidates that were queued while setRemoteDescription was processing
+            await this.processIceQueue(peerId);
         });
 
         this.socket.on('webrtc-answer', async (data: any) => {
@@ -118,18 +122,27 @@ export class WebRTCHandler {
             const peerConnection = this.peers[peerId];
             if (peerConnection) {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                // Process any ICE candidates that were queued while setRemoteDescription was processing
+                await this.processIceQueue(peerId);
             }
         });
 
         this.socket.on('ice-candidate', async (data: any) => {
             const peerId = data.sender_id;
             const peerConnection = this.peers[peerId];
-            if (peerConnection && data.candidate) {
+            if (peerConnection && peerConnection.remoteDescription) {
                 try {
                     await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                 } catch (e) {
                     console.error('Error adding received ice candidate:', e);
                 }
+            } else {
+                // Queue the candidate until remote description is set
+                if (!this.iceQueue[peerId]) {
+                    this.iceQueue[peerId] = [];
+                }
+                this.iceQueue[peerId].push(data.candidate);
+                console.log('Queued ICE candidate for peer:', peerId);
             }
         });
 
@@ -188,8 +201,27 @@ export class WebRTCHandler {
             pc.close();
             delete this.peers[peerId];
         }
+        delete this.iceQueue[peerId];
         if (this.onRemoteStreamRemoved) {
             this.onRemoteStreamRemoved(peerId);
+        }
+    }
+
+    private async processIceQueue(peerId: number): Promise<void> {
+        const pc = this.peers[peerId];
+        const queue = this.iceQueue[peerId];
+        if (pc && queue && pc.remoteDescription) {
+            console.log(`Processing ${queue.length} queued ICE candidates for peer: ${peerId}`);
+            while (queue.length > 0) {
+                const candidate = queue.shift();
+                if (candidate) {
+                    try {
+                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (e) {
+                        console.error('Error adding processed queued ice candidate:', e);
+                    }
+                }
+            }
         }
     }
 
