@@ -734,6 +734,7 @@ async def join_meeting_api(data: JoinMeetingSchema):
                     is_active=True
                 )
                 session.add(meeting)
+                session.delete(scheduled) # Remove from scheduled list since it is now active
                 session.commit()
             else:
                 raise HTTPException(status_code=404, detail="Active meeting not found")
@@ -824,7 +825,23 @@ async def schedule_meeting(data: ScheduleMeetingSchema):
 async def get_scheduled_meetings(user_id: int):
     session = db_manager.get_session()
     try:
-        meetings = session.query(ScheduledMeeting).filter(ScheduledMeeting.scheduled_time >= datetime.utcnow()).order_by(ScheduledMeeting.scheduled_time.asc()).all()
+        now = datetime.utcnow()
+        expired_threshold = now - timedelta(minutes=15)
+        
+        # Clean up any scheduled meetings that expired (started >15 minutes ago but never started)
+        expired_meetings = session.query(ScheduledMeeting).filter(
+            ScheduledMeeting.scheduled_time < expired_threshold
+        ).all()
+        for m in expired_meetings:
+            session.delete(m)
+        if expired_meetings:
+            session.commit()
+
+        # Fetch scheduled meetings that are upcoming OR started within the last 15 minutes
+        meetings = session.query(ScheduledMeeting).filter(
+            ScheduledMeeting.scheduled_time >= expired_threshold
+        ).order_by(ScheduledMeeting.scheduled_time.asc()).all()
+        
         results = []
         for m in meetings:
             results.append({
