@@ -276,6 +276,50 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
         }
     };
 
+    const handleDownloadCSV = () => {
+        const activeList = Object.values(participants);
+        if (activeList.length === 0) {
+            alert("No participant data available to download.");
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Add header info
+        csvContent += `Attentix Classroom Engagement Report\n`;
+        csvContent += `Meeting ID,${meeting.roomCode}\n`;
+        csvContent += `Date,${new Date().toLocaleDateString()}\n`;
+        csvContent += `Total Participants,${activeList.length}\n`;
+        csvContent += `Average Classroom Attention,${avgScore}%\n\n`;
+        
+        // Add table headers
+        csvContent += `Participant Name,Attention Score (%),State,Warnings Count,Last Active Time\n`;
+        
+        // Add row data
+        activeList.forEach(p => {
+            const timeStr = new Date(p.lastActive).toLocaleTimeString();
+            csvContent += `"${p.username}",${p.score}%,${p.state},${p.warnings},"${timeStr}"\n`;
+        });
+
+        // Append distraction incidents log if available
+        if (logs.length > 0) {
+            csvContent += `\nDistraction Incidents Log\n`;
+            csvContent += `Student,Incident State,Attention Score,Warnings,Timestamp\n`;
+            logs.forEach(log => {
+                csvContent += `"${log.username}",${log.state},${log.score}%,${log.warnings},"${log.timestamp}"\n`;
+            });
+        }
+
+        // Create download link and click it
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Attentix_Report_${meeting.roomCode}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const activeList = Object.values(participants);
     const avgScore = activeList.length > 0 
         ? Math.round(activeList.reduce((acc, curr) => acc + curr.score, 0) / activeList.length) 
@@ -290,6 +334,12 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                     Attentix<span className="text-xs text-slate-400 font-normal ml-3">Usage & Attention Reports</span>
                 </div>
                 <div className="flex items-center gap-4">
+                    <button 
+                        onClick={handleDownloadCSV}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white font-semibold rounded-lg text-xs transition-all shadow-md"
+                    >
+                        📥 Download CSV Report
+                    </button>
                     <button 
                         onClick={onReturnToMeeting}
                         className="flex items-center gap-1 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold rounded-lg text-xs transition-all"
