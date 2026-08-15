@@ -2,7 +2,7 @@ import os
 import random
 import string
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -1064,30 +1064,31 @@ def scheduled_meeting_reminder_worker():
         session = db_manager.get_session()
         try:
             now = datetime.utcnow()
+            due_time = now + timedelta(minutes=10)
             due_meetings = session.query(ScheduledMeeting).filter(
-                ScheduledMeeting.scheduled_time <= now,
+                ScheduledMeeting.scheduled_time <= due_time,
                 ScheduledMeeting.reminder_sent == False
             ).all()
             
             for meeting in due_meetings:
                 host = session.query(User).filter(User.id == meeting.host_id).first()
                 if host and host.email:
-                    subject = f"Attentix Reminder: Your Meeting '{meeting.topic}' is starting now!"
+                    subject = f"Attentix Reminder: Your Meeting '{meeting.topic}' is starting in 10 minutes!"
                     html_body = f"""
                     <html>
                         <body style="font-family: Arial, sans-serif; background-color: #0b0b0c; color: #ffffff; padding: 20px;">
                             <div style="max-width: 600px; margin: 0 auto; background-color: #161618; border: 1px solid #2f2f33; padding: 30px; border-radius: 12px;">
                                 <h2 style="color: #2D8CFF; margin-bottom: 20px; font-weight: 900;">Attentix Meeting Reminder</h2>
                                 <p style="font-size: 14px; color: #d0d0d8;">Hello <strong>{host.username}</strong>,</p>
-                                <p style="font-size: 14px; color: #d0d0d8;">This is a reminder that your scheduled meeting is starting now!</p>
+                                <p style="font-size: 14px; color: #d0d0d8;">This is a reminder that your scheduled meeting is starting in <strong>10 minutes</strong>!</p>
                                 <div style="background-color: #242428; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2D8CFF;">
                                     <p style="margin: 0; font-size: 13px; color: #ffffff;"><strong>Topic:</strong> {meeting.topic}</p>
                                     <p style="margin: 6px 0 0 0; font-size: 13px; color: #ffffff;"><strong>Meeting ID:</strong> {meeting.meeting_number}</p>
                                     <p style="margin: 6px 0 0 0; font-size: 13px; color: #ffffff;"><strong>Scheduled Time:</strong> {meeting.scheduled_time.strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
                                 </div>
-                                <p style="font-size: 14px; color: #d0d0d8;">Click the link below or copy the Meeting ID into your Attentix desktop app to start the meeting:</p>
+                                <p style="font-size: 14px; color: #d0d0d8;">Click the link below to open your meeting lobby on Vercel:</p>
                                 <p style="text-align: center; margin: 30px 0;">
-                                    <a href="http://localhost:5000/index.html?room={meeting.meeting_number}" style="background-color: #2D8CFF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Start Meeting Now</a>
+                                    <a href="https://attentix-app.vercel.app/index.html?room={meeting.meeting_number}" style="background-color: #2D8CFF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Start Meeting Now</a>
                                 </p>
                                 <hr style="border: 0; border-top: 1px solid #2f2f33; margin: 30px 0;" />
                                 <p style="font-size: 10px; color: #82828c;">This is an automated notification from Attentix. You received this email because you scheduled a meeting session.</p>
