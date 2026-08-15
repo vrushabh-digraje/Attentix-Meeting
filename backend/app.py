@@ -1065,8 +1065,10 @@ def scheduled_meeting_reminder_worker():
         try:
             now = datetime.utcnow()
             due_time = now + timedelta(minutes=10)
+            past_threshold = now - timedelta(minutes=15)
             due_meetings = session.query(ScheduledMeeting).filter(
                 ScheduledMeeting.scheduled_time <= due_time,
+                ScheduledMeeting.scheduled_time >= past_threshold,
                 ScheduledMeeting.reminder_sent == False
             ).all()
             

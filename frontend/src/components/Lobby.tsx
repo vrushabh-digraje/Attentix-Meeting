@@ -130,7 +130,12 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
 
     const handleScheduleMeeting = async (e: React.FormEvent) => {
         e.preventDefault();
-        const combinedDateTime = `${scheduleDate}T${scheduleTime}`;
+        const localDate = new Date(`${scheduleDate}T${scheduleTime}`);
+        if (isNaN(localDate.getTime())) {
+            alert('Please select a valid date and time.');
+            return;
+        }
+        const combinedDateTime = localDate.toISOString();
         try {
             const res = await fetch(`${apiBase}/api/meetings/schedule`, {
                 method: 'POST',
