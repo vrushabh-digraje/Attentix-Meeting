@@ -609,13 +609,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex-grow flex flex-col overflow-hidden h-full">
                     {/* Thumbnails Row (Top horizontal scrolling list) */}
                     {hasRemote && (
-                        <div className="h-32 bg-[#141416]/50 border-b border-zoomBorder flex items-center gap-3 px-6 overflow-x-auto select-none py-2 shrink-0">
+                        <div className="h-24 sm:h-32 bg-[#141416]/50 border-b border-zoomBorder flex items-center gap-2 px-3 sm:px-6 overflow-x-auto select-none py-1.5 sm:py-2 shrink-0">
                             
                             {/* Render Local video as thumbnail if not pinned */}
                             {activePin !== 'local' && (
                                 <div 
                                     onClick={() => setPinnedPeerId('local')}
-                                    className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-24 max-sm:h-36 max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
+                                    className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-28 max-sm:aspect-video max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
                                 >
                                     <video 
                                         ref={localVideoRef} 
@@ -647,7 +647,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                     <div 
                                         key={peerId}
                                         onClick={() => setPinnedPeerId(peerId)}
-                                        className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
+                                        className="relative aspect-video w-24 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
                                     >
                                         {isCamOn ? (
                                             <ParticipantVideo 
@@ -671,7 +671,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     )}
 
                     {/* Big Viewport (Active Pinned Video) */}
-                    <div className="flex-grow flex items-center justify-center p-4 relative bg-[#0e0f11]">
+                    <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-[#090A0F]">
                         {activePin === 'local' ? (
                             <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
