@@ -12,50 +12,50 @@
   }
 
   .premium-bg {
-    background: radial-gradient(circle at top left, #121318 0%, #09090b 50%, #050507 100%);
+    background: radial-gradient(circle at top left, #141624 0%, #090A0F 50%, #050507 100%);
   }
 
   .premium-glow-blue {
-    box-shadow: 0 0 20px rgba(14, 113, 235, 0.15);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.15);
   }
 
   .premium-glow-orange {
-    box-shadow: 0 0 20px rgba(224, 87, 19, 0.15);
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.15);
   }
 
   .gradient-text-blue {
-    background: linear-gradient(135deg, #0e71eb 0%, #4295f4 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .gradient-text-orange {
-    background: linear-gradient(135deg, #e05713 0%, #ff8243 100%);
+    background: linear-gradient(135deg, #f97316 0%, #fdba74 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .btn-premium-orange {
-    background: linear-gradient(135deg, #e05713 0%, #f97316 100%);
-    box-shadow: 0 4px 15px rgba(224, 87, 19, 0.25);
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.25);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .btn-premium-orange:hover {
-    background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
-    box-shadow: 0 6px 20px rgba(224, 87, 19, 0.4);
+    background: linear-gradient(135deg, #f97316 0%, #ff8f59 100%);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
     transform: translateY(-1px);
   }
 
   .btn-premium-blue {
-    background: linear-gradient(135deg, #0e71eb 0%, #3b82f6 100%);
-    box-shadow: 0 4px 15px rgba(14, 113, 235, 0.25);
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .btn-premium-blue:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #60a5fa 100%);
-    box-shadow: 0 6px 20px rgba(14, 113, 235, 0.4);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
     transform: translateY(-1px);
   }
 
