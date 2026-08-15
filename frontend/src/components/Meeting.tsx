@@ -241,6 +241,15 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }
         };
     }, [meeting.meetingId]);
+ 
+    // Robustly bind the localStream to localVideoRef whenever it mounts or updates (Fixes random self video black screen)
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            console.log("Binding localStream to localVideoRef explicitly");
+            localVideoRef.current.srcObject = localStream;
+            localVideoRef.current.play().catch(e => console.warn("Failed to play local video", e));
+        }
+    }, [localStream, pinnedPeerId, videoEnabled]);
 
     // 2. Start local Attention Tracking asynchronously in background (Only for participants!)
     useEffect(() => {
@@ -542,13 +551,12 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 </div>
             )}
 
-            {/* Green Lock Shield Info Overlay */}
-            <div className="absolute top-4 left-6 z-40 flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-sm border border-white/5">
-                <span className="text-zoomGreen text-sm">🛡️</span>
-                <span className="text-slate-300">Attentix Meeting</span>
-                <span className="text-white/20">|</span>
-                <span className="text-zoomTextSec font-mono">
-                    Room: {meeting.roomCode.slice(0,3)}-{meeting.roomCode.slice(3,6)}-{meeting.roomCode.slice(6,9)}
+            {/* Center-Top Meeting ID Header */}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2.5 bg-[#0C0D15]/85 px-4 py-2 rounded-full text-xs font-semibold backdrop-blur-sm border border-zoomBorder shadow-xl">
+                <span className="w-2 h-2 rounded-full bg-stateGreen animate-pulse"></span>
+                <span className="text-slate-300">Room:</span>
+                <span className="text-white font-mono tracking-wider font-extrabold text-[13px]">
+                    {meeting.roomCode.slice(0,3)}-{meeting.roomCode.slice(3,6)}-{meeting.roomCode.slice(6,9)}
                 </span>
             </div>
 
@@ -606,16 +614,16 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 )}
 
                 {/* Left Area: Video feeds */}
-                <div className="flex-grow flex flex-col overflow-hidden h-full">
-                    {/* Thumbnails Row (Top horizontal scrolling list) */}
+                <div className="flex-grow flex flex-col md:flex-row-reverse overflow-hidden h-full">
+                    {/* Thumbnails Row (Top horizontal scrolling list on mobile, right column on desktop) */}
                     {hasRemote && (
-                        <div className="h-24 sm:h-32 bg-[#141416]/50 border-b border-zoomBorder flex items-center gap-2 px-3 sm:px-6 overflow-x-auto select-none py-1.5 sm:py-2 shrink-0">
+                        <div className="w-full h-24 md:w-60 md:h-full bg-[#141416]/50 border-b md:border-b-0 md:border-l border-zoomBorder flex flex-row md:flex-col items-center gap-2 px-3 md:py-4 overflow-x-auto md:overflow-y-auto select-none py-1.5 sm:py-2 shrink-0 scrollbar-thin">
                             
                             {/* Render Local video as thumbnail if not pinned */}
                             {activePin !== 'local' && (
                                 <div 
                                     onClick={() => setPinnedPeerId('local')}
-                                    className="relative aspect-video w-36 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-28 max-sm:aspect-video max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
+                                    className="relative aspect-video w-36 md:w-full bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-28 max-sm:aspect-video max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
                                 >
                                     <video 
                                         ref={localVideoRef} 
@@ -647,7 +655,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                     <div 
                                         key={peerId}
                                         onClick={() => setPinnedPeerId(peerId)}
-                                        className="relative aspect-video w-24 sm:w-48 bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
+                                        className="relative aspect-video w-24 md:w-full bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
                                     >
                                         {isCamOn ? (
                                             <ParticipantVideo 
