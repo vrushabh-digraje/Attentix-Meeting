@@ -162,9 +162,23 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             ...prev,
                             [peerId]: { peerName, stream: remoteStream }
                         }));
+                        // Add participant to scoreboard immediately with a default of 100%
+                        setParticipantScores(prev => {
+                            if (prev[peerId]) return prev;
+                            return {
+                                ...prev,
+                                [peerId]: { username: peerName, score: 100 }
+                            };
+                        });
                     },
                     (peerId) => {
                         setRemotePeers(prev => {
+                            const copy = { ...prev };
+                            delete copy[peerId];
+                            return copy;
+                        });
+                        // Remove participant from scoreboard when they leave
+                        setParticipantScores(prev => {
                             const copy = { ...prev };
                             delete copy[peerId];
                             return copy;
