@@ -924,15 +924,45 @@ async def handle_join_room(sid, data):
     user_id = data.get('user_id')
     username = data.get('username')
     
-    # Track socket connection mapping
     user_sids[user_id] = sid
     await sio.enter_room(sid, room)
-    # Notify other users in the room
-    await sio.emit('peer-joined', {
-        'user_id': user_id,
-        'username': username,
-        'socket_id': sid
-    }, room=room, skip_sid=sid)
+    
+    session = db_manager.get_session()
+    is_host = False
+    try:
+        meeting = session.query(Meeting).filter(Meeting.id == int(room)).first()
+        if meeting and meeting.host_id == user_id:
+            is_host = True
+    except Exception as e:
+        print(f"[SOCKET ERROR] Failed to check host: {e}")
+    finally:
+        session.close()
+
+    if is_host:
+        print(f"[SOCKET] Host {username} ({user_id}) joined room {room} immediately")
+        await sio.emit('peer-joined', {
+            'user_id': user_id,
+            'username': username,
+            'socket_id': sid
+        }, room=room, skip_sid=sid)
+    else:
+        print(f"[SOCKET] Participant {username} ({user_id}) asking to join room {room}")
+        host_id = None
+        session = db_manager.get_session()
+        try:
+            meeting = session.query(Meeting).filter(Meeting.id == int(room)).first()
+            if meeting:
+                host_id = meeting.host_id
+        finally:
+            session.close()
+            
+        if host_id:
+            host_sid = user_sids.get(host_id)
+            if host_sid:
+                await sio.emit('join-request', {
+                    'user_id': user_id,
+                    'username': username
+                }, to=host_sid)
 
 @sio.on('leave-room')
 async def handle_leave_room(sid, data):
@@ -987,6 +1017,39 @@ async def handle_ice_candidate(sid, data):
             'candidate': data.get('candidate'),
             'sender_id': data.get('sender_id')
         }, to=target_sid)
+
+@sio.on('approve-join')
+async def handle_approve_join(sid, data):
+    room = str(data.get('meeting_id'))
+    target_id = int(data.get('target_id'))
+    target_sid = user_sids.get(target_id)
+    if target_sid:
+        print(f"[SOCKET] Host approved join for {target_id}")
+        await sio.emit('join-approved', {}, to=target_sid)
+        
+        # Look up username to broadcast peer-joined
+        session = db_manager.get_session()
+        username = "Unknown Student"
+        try:
+            user = session.query(User).filter(User.id == target_id).first()
+            if user:
+                username = user.username
+        finally:
+            session.close()
+            
+        await sio.emit('peer-joined', {
+            'user_id': target_id,
+            'username': username,
+            'socket_id': target_sid
+        }, room=room, skip_sid=target_sid)
+
+@sio.on('decline-join')
+async def handle_decline_join(sid, data):
+    target_id = int(data.get('target_id'))
+    target_sid = user_sids.get(target_id)
+    if target_sid:
+        print(f"[SOCKET] Host declined join for {target_id}")
+        await sio.emit('join-declined', {}, to=target_sid)
 
 @sio.on('kick-participant')
 async def handle_kick_participant(sid, data):

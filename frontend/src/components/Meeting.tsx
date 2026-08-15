@@ -83,6 +83,10 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [videoEnabled, setVideoEnabled] = useState<boolean>(true);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remotePeers, setRemotePeers] = useState<{ [key: number]: RemotePeer }>({});
+    const [waitingRoomState, setWaitingRoomState] = useState<'waiting' | 'approved' | 'declined'>(
+        meeting.role === 'host' ? 'approved' : 'waiting'
+    );
+    const [joinRequest, setJoinRequest] = useState<{ user_id: number, username: string } | null>(null);
     const [pinnedPeerId, setPinnedPeerId] = useState<string | number>('local');
     const [remoteCameras, setRemoteCameras] = useState<{ [key: number]: boolean }>({});
 
@@ -191,6 +195,22 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                 // Listen for host kick events
                 if (handler.socket) {
+                    handler.socket.on('join-request', (data: any) => {
+                        console.log('Received join request from:', data.username);
+                        setJoinRequest(data);
+                        playWarningBeep();
+                    });
+
+                    handler.socket.on('join-approved', () => {
+                        console.log('Join approved by host');
+                        setWaitingRoomState('approved');
+                    });
+
+                    handler.socket.on('join-declined', () => {
+                        console.log('Join declined by host');
+                        setWaitingRoomState('declined');
+                    });
+
                     handler.socket.on('participant-kicked', (data: any) => {
                         if (data.user_id === user.id) {
                             alert("You have been removed from the meeting by the host.");
@@ -253,7 +273,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
     // 2. Start local Attention Tracking asynchronously in background (Only for participants!)
     useEffect(() => {
-        if (!localStream || meeting.role === 'host') return;
+        if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved') return;
 
         const engine = new AttentionEngine();
         attentionEngineRef.current = engine;
@@ -383,6 +403,26 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         } catch (e) {
             console.error('Failed to log attention data:', e);
         }
+    };
+
+    const handleApproveJoin = (targetId: number) => {
+        if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('approve-join', {
+                meeting_id: meeting.meetingId,
+                target_id: targetId
+            });
+        }
+        setJoinRequest(null);
+    };
+
+    const handleDeclineJoin = (targetId: number) => {
+        if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('decline-join', {
+                meeting_id: meeting.meetingId,
+                target_id: targetId
+            });
+        }
+        setJoinRequest(null);
     };
 
     // Toggle Audio
@@ -956,6 +996,71 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 </div>
 
             </div>
+
+            {/* Host Admittance Request Popup Overlay */}
+            {meeting.role === 'host' && joinRequest && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="bg-[#151622] border-2 border-zoomBlue p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center mx-4">
+                        <div className="w-12 h-12 rounded-full bg-zoomBlue/15 text-zoomBlue flex items-center justify-center text-xl mx-auto mb-3">
+                            👤
+                        </div>
+                        <h3 className="text-white font-extrabold text-base tracking-wide mb-1">Admittance Request</h3>
+                        <p className="text-slate-400 text-xs mb-6">
+                            Student <strong className="text-white">{joinRequest.username}</strong> is asking to join this meeting.
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => handleApproveJoin(joinRequest.user_id)}
+                                className="flex-1 py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white rounded-lg text-xs font-bold transition-all"
+                            >
+                                Admit
+                            </button>
+                            <button 
+                                onClick={() => handleDeclineJoin(joinRequest.user_id)}
+                                className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-lg text-xs font-bold transition-all border border-white/10"
+                            >
+                                Decline
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Participant Waiting Room Overlay */}
+            {waitingRoomState === 'waiting' && (
+                <div className="fixed inset-0 bg-[#090A0F] z-50 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-16 h-16 rounded-full border-4 border-zoomBlue border-t-transparent animate-spin mb-6"></div>
+                    <h2 className="text-xl font-extrabold text-white mb-2">Waiting for Host...</h2>
+                    <p className="text-slate-400 text-xs max-w-sm">
+                        You have requested to join this meeting. Please wait for the host to admit you to the session.
+                    </p>
+                    <button 
+                        onClick={onLeave}
+                        className="mt-8 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold transition-all border border-white/5"
+                    >
+                        Cancel Request
+                    </button>
+                </div>
+            )}
+
+            {/* Participant Request Declined Overlay */}
+            {waitingRoomState === 'declined' && (
+                <div className="fixed inset-0 bg-[#090A0F] z-50 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="w-14 h-14 rounded-full bg-stateRed/15 text-stateRed flex items-center justify-center text-2xl mb-4">
+                        ❌
+                    </div>
+                    <h2 className="text-xl font-extrabold text-stateRed mb-2">Request Declined</h2>
+                    <p className="text-slate-400 text-xs max-w-xs leading-relaxed">
+                        Your request to join this meeting was declined by the host.
+                    </p>
+                    <button 
+                        onClick={onLeave}
+                        className="mt-8 px-6 py-2.5 bg-zoomBlue hover:bg-zoomBlueHover text-white rounded-full text-xs font-bold transition-all"
+                    >
+                        Back to Lobby
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
