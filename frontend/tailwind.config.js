@@ -7,20 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        zoomBlue: '#4F46E5', // Premium Indigo
-        zoomBlueHover: '#4338CA',
-        zoomOrange: '#F97316', // Orange Accent
-        zoomOrangeHover: '#EA580C',
-        zoomDarkBg: '#F8FAFC', // Slate 50 Light Background
-        zoomCard: '#FFFFFF', // Clean White Cards
-        zoomPanel: '#FFFFFF', // Clean White Panels
-        zoomControlBar: '#F1F5F9', // Clean light Slate Control Bar
-        zoomBorder: '#E2E8F0', // Soft borders
-        zoomText: '#0F172A', // Slate 900 primary text
-        zoomTextSec: '#475569', // Slate 600 secondary text
-        stateGreen: '#10B981',
-        stateYellow: '#F59E0B',
-        stateRed: '#EF4444',
+        zoomBlue: '#D97706',         // Bronze Amber (Active buttons & Highlights)
+        zoomBlueHover: '#B45309',    // Dark Amber Hover state
+        zoomOrange: '#06B6D4',       // Soft Cyan (Focus highlights / Alerts)
+        zoomOrangeHover: '#0891B2',  // Dark Cyan Hover
+        zoomDarkBg: '#FAF9F6',       // Alabaster/Cream 50 (Soft, organic background)
+        zoomCard: '#FFFFFF',         // Crisp White Cards
+        zoomPanel: '#FFFFFF',        // Crisp White Sidebar
+        zoomControlBar: '#F5F4F0',   // Alabaster/Warm-Stone 100 (Control bar background)
+        zoomBorder: '#E6E4DC',       // Stone 200 (Soft organic borders)
+        zoomText: '#1C1917',         // Stone 900 (Very dark warm gray primary text)
+        zoomTextSec: '#57534E',      // Stone 600 (Secondary descriptive text)
+        stateGreen: '#15803D',       // Sage Green
+        stateYellow: '#CA8A04',      // Soft Yellow-Gold
+        stateRed: '#BE123C',         // Burgundy/Rose Red
       },
       fontFamily: {
         sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

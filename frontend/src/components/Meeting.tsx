@@ -802,12 +802,12 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         }
                                         
                                         return (
-                                            <div key={pId} className="bg-zoomCard/60 border border-white/5 p-3 rounded-lg flex flex-col gap-1.5 shadow-sm">
-                                                <div className="flex justify-between items-center text-[11px] font-bold text-white">
+                                            <div key={pId} className="bg-zoomCard border border-zoomBorder p-3 rounded-lg flex flex-col gap-1.5 shadow-sm">
+                                                <div className="flex justify-between items-center text-[11px] font-bold text-zoomText">
                                                     <span className="truncate max-w-[145px]">{scoreData.username}</span>
                                                     <span className={`${textColor} font-mono`}>{scorePct}%</span>
                                                 </div>
-                                                <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                                                     <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${scorePct}%` }}></div>
                                                 </div>
                                             </div>
