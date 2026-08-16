@@ -114,6 +114,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const lastLogTime = useRef<number>(0);
     const lastSocketEmitTime = useRef<number>(0);
     const logsBufferRef = useRef<any[]>([]);
+    const lastActivityTime = useRef<number>(Date.now());
 
     const webrtcHandlerRef = useRef<WebRTCHandler | null>(null);
     const attentionEngineRef = useRef<AttentionEngine | null>(null);
@@ -281,7 +282,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     // A 1.5-second timeout delay is used to ensure the waiting room overlay has fully unmounted
     // and both video/canvas DOM element refs are fully painted and available in React's lifecycle.
     useEffect(() => {
-        if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved') return;
+        if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved' || !videoEnabled) return;
 
         let activeEngine: AttentionEngine | null = null;
         let isCancelled = false;
@@ -314,7 +315,85 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 activeEngine.stop();
             }
         };
-    }, [localStream, waitingRoomState]);
+    }, [localStream, waitingRoomState, videoEnabled]);
+
+    // Track browser focus/mouse/keyboard activity for fallback attention tracking
+    useEffect(() => {
+        const handleUserActivity = () => {
+            lastActivityTime.current = Date.now();
+        };
+
+        window.addEventListener('mousemove', handleUserActivity);
+        window.addEventListener('keydown', handleUserActivity);
+        window.addEventListener('click', handleUserActivity);
+        window.addEventListener('scroll', handleUserActivity);
+        window.addEventListener('touchstart', handleUserActivity);
+
+        return () => {
+            window.removeEventListener('mousemove', handleUserActivity);
+            window.removeEventListener('keydown', handleUserActivity);
+            window.removeEventListener('click', handleUserActivity);
+            window.removeEventListener('scroll', handleUserActivity);
+            window.removeEventListener('touchstart', handleUserActivity);
+        };
+    }, []);
+
+    // Fallback Attention Loop when camera is OFF (Score updates according to movement)
+    useEffect(() => {
+        if (meeting.role === 'host' || waitingRoomState !== 'approved' || videoEnabled) return;
+
+        console.log("Camera is off. Starting movement/interaction fallback attention scoring.");
+
+        const fallbackScoringLoop = () => {
+            const timeSinceLastActivity = Date.now() - lastActivityTime.current;
+            
+            // Stays 100% for 8 seconds, decays to 0% after 28 seconds of idle time
+            let activityScore = 100;
+            if (timeSinceLastActivity > 8000) {
+                const idleSeconds = (timeSinceLastActivity - 8000) / 1000;
+                activityScore = Math.max(0, Math.round(100 - (idleSeconds * 5))); // 5% decay per second
+            }
+
+            const state = activityScore >= 75 ? 'Attentive' : (activityScore >= 45 ? 'Distracted' : 'Inactive');
+
+            // Emit to host scoreboard via socket
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('attention-score-update', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username,
+                    score: activityScore
+                });
+            }
+
+            // Write log to database queue
+            logsBufferRef.current.push({
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                attention_score: activityScore,
+                state: state,
+                warnings_count: warningCountRef.current
+            });
+
+            // Local warnings trigger (Warnings for low activity when camera is off)
+            if (activityScore < 20) {
+                if (belowThresholdStartTimeRef.current === null) {
+                    belowThresholdStartTimeRef.current = Date.now();
+                } else if (Date.now() - belowThresholdStartTimeRef.current >= 180000) { // 3 mins threshold
+                    triggerInattentionWarning(state);
+                    belowThresholdStartTimeRef.current = Date.now();
+                }
+            } else {
+                belowThresholdStartTimeRef.current = null;
+                setShowWarning(false);
+            }
+        };
+
+        const interval = setInterval(fallbackScoringLoop, 2000);
+        return () => {
+            clearInterval(interval);
+        };
+    }, [videoEnabled, waitingRoomState, meeting.role]);
 
     // Auto-dismiss chat notification toast after 2 seconds
     useEffect(() => {
