@@ -22,6 +22,8 @@ interface ParticipantVideoProps {
     muted?: boolean;
 }
 
+const failedPlaybacks = new Set<HTMLVideoElement>();
+
 const ParticipantVideo: React.FC<ParticipantVideoProps> = ({ stream, className, muted }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     useEffect(() => {
@@ -29,14 +31,27 @@ const ParticipantVideo: React.FC<ParticipantVideoProps> = ({ stream, className, 
         if (!videoEl) return;
 
         videoEl.srcObject = stream;
-        videoEl.play().catch(e => console.log("Play failed on bind", e));
+        videoEl.play()
+            .then(() => {
+                failedPlaybacks.delete(videoEl);
+            })
+            .catch(e => {
+                console.warn("Play failed on bind due to autoplay restrictions, adding to retry queue", e);
+                failedPlaybacks.add(videoEl);
+            });
 
         const handleTrackEvent = () => {
-            console.log("Track change (mute/unmute/add/remove) detected on stream, refreshing srcObject");
             if (videoEl) {
                 videoEl.srcObject = null;
                 videoEl.srcObject = stream;
-                videoEl.play().catch(e => console.log("Play failed on track change", e));
+                videoEl.play()
+                    .then(() => {
+                        failedPlaybacks.delete(videoEl);
+                    })
+                    .catch(e => {
+                        console.warn("Play failed on track change, adding to retry queue", e);
+                        failedPlaybacks.add(videoEl);
+                    });
             }
         };
 
@@ -48,6 +63,7 @@ const ParticipantVideo: React.FC<ParticipantVideoProps> = ({ stream, className, 
         });
 
         return () => {
+            failedPlaybacks.delete(videoEl);
             stream.removeEventListener('addtrack', handleTrackEvent);
             stream.removeEventListener('removetrack', handleTrackEvent);
             stream.getTracks().forEach(track => {
@@ -283,9 +299,37 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         if (localVideoRef.current && localStream) {
             console.log("Binding localStream to localVideoRef explicitly");
             localVideoRef.current.srcObject = localStream;
-            localVideoRef.current.play().catch(e => console.warn("Failed to play local video", e));
+            const videoEl = localVideoRef.current;
+            videoEl.play()
+                .then(() => {
+                    failedPlaybacks.delete(videoEl);
+                })
+                .catch(e => {
+                    console.warn("Failed to play local video due to autoplay rules, adding to retry queue", e);
+                    failedPlaybacks.add(videoEl);
+                });
         }
     }, [localStream, pinnedPeerId, videoEnabled]);
+
+    // Global autoplay retry registration on user interaction
+    useEffect(() => {
+        const retryAutoplay = () => {
+            failedPlaybacks.forEach(video => {
+                if (video) {
+                    video.play()
+                        .then(() => failedPlaybacks.delete(video))
+                        .catch(err => console.log("Retried autoplay but blocked: ", err));
+                }
+            });
+        };
+
+        window.addEventListener('click', retryAutoplay);
+        window.addEventListener('touchstart', retryAutoplay);
+        return () => {
+            window.removeEventListener('click', retryAutoplay);
+            window.removeEventListener('touchstart', retryAutoplay);
+        };
+    }, []);
 
     // 2. Start local Attention Tracking asynchronously in background (Only for participants!)
     // A 1.5-second timeout delay is used to ensure the waiting room overlay has fully unmounted
