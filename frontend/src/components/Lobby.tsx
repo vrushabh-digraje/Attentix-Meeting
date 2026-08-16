@@ -164,7 +164,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
     return (
         <div className="flex flex-col min-h-screen premium-bg text-zoomText font-sans">
             {/* Nav Header */}
-            <nav className="flex justify-between items-center px-8 py-3 bg-[#18181a]/80 backdrop-blur-md border-b border-zoomBorder sticky top-0 z-50">
+            <nav className="flex justify-between items-center px-8 py-3 bg-zoomControlBar/80 backdrop-blur-md border-b border-zoomBorder sticky top-0 z-50">
                 <div className="text-xl font-black gradient-text-blue">
                     Attentix
                 </div>
@@ -333,7 +333,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
             {/* Schedule Meeting Modal Dialog */}
             {showScheduleModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="bg-[#1e1e21] border border-white/10 p-6 rounded-2xl max-w-sm w-full shadow-2xl relative text-left mx-4">
+                    <div className="bg-zoomPanel border border-zoomBorder p-6 rounded-2xl max-w-sm w-full shadow-2xl relative text-left mx-4">
                         <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                             <span>📅</span> Schedule New Meeting
                         </h3>

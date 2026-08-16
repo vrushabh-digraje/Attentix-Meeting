@@ -606,7 +606,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 {/* Left Side: Host-Only Attention Scoreboard */}
                 {meeting.role === 'host' && showScoreboard && (
                     <div className="fixed inset-y-0 left-0 w-64 border-r border-zoomBorder bg-zoomPanel/95 backdrop-blur-md flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 md:z-20 shadow-2xl md:shadow-none">
-                        <div className="p-4 border-b border-zoomBorder bg-[#18181a]/90 flex justify-between items-center">
+                        <div className="p-4 border-b border-zoomBorder bg-zoomControlBar/90 flex justify-between items-center">
                             <div>
                                 <h3 className="font-bold text-xs text-zoomOrange uppercase tracking-widest flex items-center gap-1.5">
                                     📊 Attention Scoreboard
@@ -657,13 +657,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex-grow flex flex-col md:flex-row-reverse overflow-hidden h-full">
                     {/* Thumbnails Row (Top horizontal scrolling list on mobile, right column on desktop) */}
                     {hasRemote && (
-                        <div className="w-full h-24 md:w-60 md:h-full bg-[#141416]/50 border-b md:border-b-0 md:border-l border-zoomBorder flex flex-row md:flex-col items-center gap-2 px-3 md:py-4 overflow-x-auto md:overflow-y-auto select-none py-1.5 sm:py-2 shrink-0 scrollbar-thin">
+                        <div className="w-full h-24 md:w-60 md:h-full bg-zoomControlBar/50 border-b md:border-b-0 md:border-l border-zoomBorder flex flex-row md:flex-col items-center gap-2 px-3 md:py-4 overflow-x-auto md:overflow-y-auto select-none py-1.5 sm:py-2 shrink-0 scrollbar-thin">
                             
                             {/* Render Local video as thumbnail if not pinned */}
                             {activePin !== 'local' && (
                                 <div 
                                     onClick={() => setPinnedPeerId('local')}
-                                    className="relative aspect-video w-36 md:w-full bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-28 max-sm:aspect-video max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
+                                    className="relative aspect-video w-36 md:w-full bg-zoomCard border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all max-sm:fixed max-sm:bottom-24 max-sm:right-4 max-sm:w-28 max-sm:aspect-video max-sm:z-30 max-sm:border-2 max-sm:border-zoomBlue max-sm:shadow-2xl"
                                 >
                                     <video 
                                         ref={localVideoRef} 
@@ -673,7 +673,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         muted 
                                     />
                                     {!videoEnabled && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-[#1c1c1e]">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-zoomPanel">
                                             <div className="w-10 h-10 rounded-full bg-zoomBlue text-white font-bold flex items-center justify-center text-sm border border-white/10 animate-pulse">
                                                 {user.username.charAt(0).toUpperCase()}
                                             </div>
@@ -695,7 +695,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                     <div 
                                         key={peerId}
                                         onClick={() => setPinnedPeerId(peerId)}
-                                        className="relative aspect-video w-24 md:w-full bg-[#1e1e21] border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
+                                        className="relative aspect-video w-24 md:w-full bg-zoomCard border border-zoomBorder rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:border-zoomBlue transition-all"
                                     >
                                         {isCamOn ? (
                                             <ParticipantVideo 
@@ -703,7 +703,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                                 className="w-full h-full object-cover" 
                                             />
                                         ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-[#1c1c1e]">
+                                            <div className="absolute inset-0 flex items-center justify-center bg-zoomPanel">
                                                 <div className="w-10 h-10 rounded-full bg-zoomCard border border-zoomBorder text-white font-bold flex items-center justify-center text-sm">
                                                     {peerObj.peerName.charAt(0).toUpperCase()}
                                                 </div>
@@ -721,16 +721,16 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     {/* Big Viewport (Active Pinned Video) */}
                     <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-[#090A0F]">
                         {activePin === 'local' ? (
-                            <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                            <div className="relative w-full max-w-4xl aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
                                     ref={localVideoRef} 
                                     className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
                                     autoPlay 
                                     playsInline 
                                     muted 
-                                />
+                                    />
                                 {!videoEnabled && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1c1c1e]">
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zoomPanel">
                                         <div className="w-20 h-20 rounded-full bg-zoomBlue text-white font-black flex items-center justify-center text-3xl border border-white/10 shadow-lg animate-pulse">
                                             {user.username.charAt(0).toUpperCase()}
                                         </div>
@@ -744,14 +744,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             </div>
                         ) : (
                             remotePeers[activePin as number] && (
-                                <div className="relative w-full max-w-4xl aspect-video bg-[#1e1e21] border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                                <div className="relative w-full max-w-4xl aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                     {remoteCameras[activePin as number] !== false ? (
                                         <ParticipantVideo 
                                             stream={remotePeers[activePin as number].stream} 
                                             className="w-full h-full object-cover" 
                                         />
                                     ) : (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#1c1c1e]">
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zoomPanel">
                                             <div className="w-20 h-20 rounded-full bg-zoomCard border border-zoomBorder text-white font-black flex items-center justify-center text-3xl shadow-lg">
                                                 {remotePeers[activePin as number].peerName.charAt(0).toUpperCase()}
                                             </div>
