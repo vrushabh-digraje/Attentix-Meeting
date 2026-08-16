@@ -7,17 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        zoomBlue: '#2563EB',
-        zoomBlueHover: '#1D4ED8',
-        zoomOrange: '#F97316',
+        zoomBlue: '#4F46E5', // Premium Indigo
+        zoomBlueHover: '#4338CA',
+        zoomOrange: '#F97316', // Orange Accent
         zoomOrangeHover: '#EA580C',
-        zoomDarkBg: '#090A0F',
-        zoomCard: '#151622',
-        zoomPanel: '#10111A',
-        zoomControlBar: '#0C0D15',
-        zoomBorder: '#202236',
-        zoomText: '#F8FAFC',
-        zoomTextSec: '#94A3B8',
+        zoomDarkBg: '#F8FAFC', // Slate 50 Light Background
+        zoomCard: '#FFFFFF', // Clean White Cards
+        zoomPanel: '#FFFFFF', // Clean White Panels
+        zoomControlBar: '#F1F5F9', // Clean light Slate Control Bar
+        zoomBorder: '#E2E8F0', // Soft borders
+        zoomText: '#0F172A', // Slate 900 primary text
+        zoomTextSec: '#475569', // Slate 600 secondary text
         stateGreen: '#10B981',
         stateYellow: '#F59E0B',
         stateRed: '#EF4444',

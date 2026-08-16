@@ -218,7 +218,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                                     onChange={e => setRoomCodeInput(e.target.value)}
                                     placeholder="Enter 9-Digit Meeting ID" 
                                     maxLength={9} 
-                                    className="w-full px-3 py-2.5 rounded-lg bg-zoomCard border border-zoomBorder text-white outline-none focus:border-zoomBlue text-center text-sm font-mono tracking-widest transition-all"
+                                    className="w-full px-3 py-2.5 rounded-lg bg-zoomCard border border-zoomBorder text-zoomText outline-none focus:border-zoomBlue text-center text-sm font-mono tracking-widest transition-all"
                                 />
                                 <button 
                                     onClick={handleJoinMeeting}
@@ -283,21 +283,21 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
 
             {/* Due Meeting Host Notification Toast */}
             {dueMeeting && (
-                <div className="fixed top-20 right-6 w-80 bg-[#1e1e21] border-2 border-zoomBlue rounded-xl p-4 shadow-2xl z-50 animate-pulse">
+                <div className="fixed top-20 right-6 w-80 bg-zoomPanel border-2 border-zoomBlue rounded-xl p-4 shadow-2xl z-50 animate-pulse">
                     <div className="flex justify-between items-start mb-2">
                         <span className="text-[10px] font-bold text-zoomBlue uppercase tracking-widest flex items-center gap-1">
                             🔔 Scheduled Meeting Due
                         </span>
-                        <button onClick={() => setDueMeeting(null)} className="text-slate-400 hover:text-white text-xs">✕</button>
+                        <button onClick={() => setDueMeeting(null)} className="text-slate-400 hover:text-zoomText text-xs">✕</button>
                     </div>
-                    <h4 className="text-xs font-bold text-white mb-1 truncate">{dueMeeting.topic}</h4>
+                    <h4 className="text-xs font-bold text-zoomText mb-1 truncate">{dueMeeting.topic}</h4>
                     <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">
                         The scheduled start time for this meeting has arrived. Click below to activate and launch the session.
                     </p>
                     <div className="flex gap-2">
                         <button 
                             onClick={() => setDueMeeting(null)}
-                            className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold rounded-lg transition-all"
+                            className="flex-1 py-1.5 bg-zoomBorder hover:bg-slate-200 text-zoomText text-[10px] font-bold rounded-lg transition-all"
                         >
                             Later
                         </button>
@@ -334,28 +334,28 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
             {showScheduleModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
                     <div className="bg-zoomPanel border border-zoomBorder p-6 rounded-2xl max-w-sm w-full shadow-2xl relative text-left mx-4">
-                        <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-zoomText mb-4 flex items-center gap-2">
                             <span>📅</span> Schedule New Meeting
                         </h3>
                         
                         <form onSubmit={handleScheduleMeeting} className="space-y-4">
                             <div>
                                 <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Meeting Topic</label>
-                                <input type="text" required value={scheduleTopic} onChange={e => setScheduleTopic(e.target.value)} placeholder="Attentix Alignment" className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-white/10 text-white outline-none focus:border-zoomBlue text-xs" />
+                                <input type="text" required value={scheduleTopic} onChange={e => setScheduleTopic(e.target.value)} placeholder="Attentix Alignment" className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-zoomText outline-none focus:border-zoomBlue text-xs" />
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Date</label>
-                                    <input type="date" required value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-white/10 text-white outline-none focus:border-zoomBlue text-xs" />
+                                    <input type="date" required value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-zoomText outline-none focus:border-zoomBlue text-xs" />
                                 </div>
                                 <div>
                                     <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Time</label>
-                                    <input type="time" required value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-white/10 text-white outline-none focus:border-zoomBlue text-xs" />
+                                    <input type="time" required value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-zoomText outline-none focus:border-zoomBlue text-xs" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Duration</label>
-                                <select value={scheduleDuration} onChange={e => setScheduleDuration(Number(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-white/10 text-slate-300 outline-none focus:border-zoomBlue text-xs">
+                                <select value={scheduleDuration} onChange={e => setScheduleDuration(Number(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-zoomText outline-none focus:border-zoomBlue text-xs">
                                     <option value={15}>15 minutes</option>
                                     <option value={30}>30 minutes</option>
                                     <option value={40}>40 minutes</option>
@@ -365,7 +365,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                             </div>
                             
                             <div className="flex gap-2 pt-2">
-                                <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-all">Cancel</button>
+                                <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 py-2 rounded-lg bg-zoomBorder hover:bg-slate-200 text-zoomText text-xs font-bold transition-all">Cancel</button>
                                 <button type="submit" className="flex-1 py-2 rounded-lg bg-zoomBlue hover:bg-zoomBlueHover text-white text-xs font-bold transition-all">Schedule</button>
                             </div>
                         </form>
