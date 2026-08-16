@@ -111,6 +111,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const warningCountRef = useRef<number>(0);
     const lastLogTime = useRef<number>(0);
     const lastSocketEmitTime = useRef<number>(0);
+    const logsBufferRef = useRef<any[]>([]);
 
     const webrtcHandlerRef = useRef<WebRTCHandler | null>(null);
     const attentionEngineRef = useRef<AttentionEngine | null>(null);
@@ -293,7 +294,40 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 attentionEngineRef.current.stop();
             }
         };
-    }, [localStream]);
+    }, [localStream, waitingRoomState]);
+
+    // Periodically flush buffered attention logs to database (Every 15 seconds)
+    useEffect(() => {
+        const flushLogs = async () => {
+            if (logsBufferRef.current.length === 0) return;
+            const payload = [...logsBufferRef.current];
+            logsBufferRef.current = []; // Clear buffer first to prevent double-sends
+            try {
+                const res = await fetch(`${apiBase}/api/attention/log/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logs: payload })
+                });
+                if (res.ok) {
+                    console.log(`Successfully flushed ${payload.length} attention logs to database.`);
+                } else {
+                    throw new Error("Failed to batch-log attention data");
+                }
+            } catch (e) {
+                console.error('Failed to batch-log attention data:', e);
+                // Restore logs back to the front of buffer if it failed
+                logsBufferRef.current = [...payload, ...logsBufferRef.current];
+            }
+        };
+
+        const interval = setInterval(flushLogs, 15000);
+        
+        // Also flush on unmount (leaving the meeting)
+        return () => {
+            clearInterval(interval);
+            flushLogs();
+        };
+    }, []);
 
     // Bind local stream to video ref whenever localStream, pinnedPeerId, or screen share status changes
     useEffect(() => {
@@ -344,11 +378,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             setShowWarning(false);
         }
 
-        // Send logs to FastAPI (Debounced to once every 3 seconds to keep DB load low)
+        // Buffer logs in memory (Every 3 seconds)
         const now = Date.now();
         if (now - lastLogTime.current > 3000) {
             lastLogTime.current = now;
-            sendLogToBackend(score, state);
+            logsBufferRef.current.push({
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                attention_score: score,
+                state: state,
+                warnings_count: warningCountRef.current
+            });
         }
 
         // Emit real-time attention score to socket (Debounced to once every 800ms for continuous updates)
@@ -385,24 +425,6 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             setWarningMsg(`Please look back at the camera to restore focus. (Warning ${warningCountRef.current} of 3)`);
         }
         setShowWarning(true);
-    };
-
-    const sendLogToBackend = async (score: number, state: string) => {
-        try {
-            await fetch(`${apiBase}/api/attention/log`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    meeting_id: meeting.meetingId,
-                    user_id: user.id,
-                    attention_score: score,
-                    state: state,
-                    warnings_count: warningCountRef.current
-                })
-            });
-        } catch (e) {
-            console.error('Failed to log attention data:', e);
-        }
     };
 
     const handleApproveJoin = (targetId: number) => {

@@ -3,7 +3,7 @@ import random
 import string
 import sys
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -89,6 +89,9 @@ class LogAttentionSchema(BaseModel):
     attention_score: float
     state: str
     warnings_count: int
+
+class BatchLogAttentionSchema(BaseModel):
+    logs: List[LogAttentionSchema]
 
 class GoogleLoginSchema(BaseModel):
     credential: Optional[str] = None
@@ -887,6 +890,31 @@ async def log_attention(data: LogAttentionSchema):
         }, room=str(data.meeting_id))
         
         return {"status": "logged"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        session.close()
+
+@app.post("/api/attention/log/batch")
+async def log_attention_batch(data: BatchLogAttentionSchema):
+    session = db_manager.get_session()
+    try:
+        new_logs = []
+        for item in data.logs:
+            new_logs.append(
+                AttentionLog(
+                    meeting_id=item.meeting_id,
+                    user_id=item.user_id,
+                    attention_score=item.attention_score,
+                    state=item.state,
+                    warnings_count=item.warnings_count,
+                    timestamp=datetime.utcnow()
+                )
+            )
+        session.add_all(new_logs)
+        session.commit()
+        return {"status": "logged", "count": len(new_logs)}
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
