@@ -770,7 +770,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 
                 {/* Left Side: Host-Only Attention Scoreboard */}
                 {meeting.role === 'host' && showScoreboard && (
-                    <div className="fixed inset-y-0 left-0 w-64 border-r border-zoomBorder bg-zoomPanel/95 backdrop-blur-md flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 md:z-20 shadow-2xl md:shadow-none">
+                    <div className="fixed inset-y-0 left-0 w-56 border-r border-zoomBorder bg-zoomPanel/95 backdrop-blur-md flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 md:z-20 shadow-2xl md:shadow-none">
                         <div className="p-4 border-b border-zoomBorder bg-zoomControlBar/90 flex justify-between items-center">
                             <div>
                                 <h3 className="font-bold text-xs text-zoomOrange uppercase tracking-widest flex items-center gap-1.5">
@@ -949,7 +949,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                 {/* Right Area: Participants list panel */}
                 {showParticipantsSidebar && (
-                    <div className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:relative md:w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
+                    <div className="fixed inset-y-0 right-0 w-64 max-w-[85vw] md:relative md:w-64 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
                         <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-zoomControlBar">
                             <h3 className="font-bold text-xs text-zoomText uppercase tracking-wider flex items-center gap-1.5">
                                 <Users size={14} className="text-zoomBlue" /> Participants ({peerIds.length + 1})
@@ -1019,7 +1019,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                 {/* Right Area: Chat Sidebar Panel */}
                 {showChatSidebar && (
-                    <div className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:relative md:w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
+                    <div className="fixed inset-y-0 right-0 w-64 max-w-[85vw] md:relative md:w-64 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
                         <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-zoomControlBar">
                             <h3 className="font-bold text-xs text-zoomText uppercase tracking-wider flex items-center gap-1.5">
                                 💬 Meeting Chat
