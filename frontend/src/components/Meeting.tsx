@@ -956,62 +956,62 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             </div>
 
             {/* Bottom Controls bar */}
-            <div className="h-[75px] bg-[#18181a] border-t border-zoomBorder flex justify-between items-center px-4 md:px-8 z-50">
+            <div className="h-[75px] bg-zoomControlBar border-t border-zoomBorder flex justify-between items-center px-2 sm:px-4 md:px-8 z-50 gap-1.5">
                 
                 {/* Audio/Video */}
-                <div className="flex items-center gap-1.5 md:gap-3">
+                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleToggleAudio}
-                        className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
                         title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
                     >
-                        {audioEnabled ? <Mic size={16} className="md:size-[18px]" /> : <MicOff size={16} className="md:size-[18px]" />}
+                        {audioEnabled ? <Mic size={14} className="sm:size-[16px] md:size-[18px]" /> : <MicOff size={14} className="sm:size-[16px] md:size-[18px]" />}
                     </button>
                     <button 
                         onClick={handleToggleVideo}
-                        className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
                         title={videoEnabled ? "Stop Camera" : "Start Camera"}
                     >
-                        {videoEnabled ? <VideoIcon size={16} className="md:size-[18px]" /> : <VideoOff size={16} className="md:size-[18px]" />}
+                        {videoEnabled ? <VideoIcon size={14} className="sm:size-[16px] md:size-[18px]" /> : <VideoOff size={14} className="sm:size-[16px] md:size-[18px]" />}
                     </button>
                 </div>
 
                 {/* Center tools */}
-                <div className="flex items-center gap-1.5 md:gap-3">
+                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleCopyInviteLink}
-                        className="w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all"
                         title="Copy Invite Link"
                     >
-                        <Share2 size={16} className="md:size-[18px]" />
+                        <Share2 size={14} className="sm:size-[16px] md:size-[18px]" />
                     </button>
                     <button 
                         onClick={handleToggleScreenShare}
-                        className={`w-9 h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                         title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
                     >
-                        <span className="text-sm md:text-base">🖥️</span>
+                        <span className="text-xs sm:text-sm md:text-base">🖥️</span>
                     </button>
                     <button 
                         onClick={() => {
                             setShowChatSidebar(!showChatSidebar);
                             setShowParticipantsSidebar(false);
                         }}
-                        className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                         title="Open Chat"
                     >
-                        <span className="text-sm md:text-base">💬</span>
+                        <span className="text-xs sm:text-sm md:text-base">💬</span>
                     </button>
                     <button 
                         onClick={() => {
                             setShowParticipantsSidebar(!showParticipantsSidebar);
                             setShowChatSidebar(false);
                         }}
-                        className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                         title="Show Participants"
                     >
-                        <Users size={16} className="md:size-[18px]" />
-                        <span className="absolute -top-1 -right-1 bg-zoomBlue text-white text-[8px] px-1.5 rounded-full font-bold shadow-md">
+                        <Users size={14} className="sm:size-[16px] md:size-[18px]" />
+                        <span className="absolute -top-0.5 -right-0.5 bg-zoomBlue text-white text-[7px] px-1 rounded-full font-bold shadow-md">
                             {peerIds.length + 1}
                         </span>
                     </button>
@@ -1019,32 +1019,34 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     {meeting.role === 'host' && (
                         <button 
                             onClick={() => setShowScoreboard(!showScoreboard)}
-                            className={`w-9 h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
                             title="Toggle Scoreboard"
                         >
-                            <span className="text-sm md:text-base">📊</span>
+                            <span className="text-xs sm:text-sm md:text-base">📊</span>
                         </button>
                     )}
                     
                     {meeting.role === 'host' && (
                         <button 
                             onClick={onOpenDashboard}
-                            className="ml-2 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full bg-zoomBlue hover:bg-zoomBlueHover text-white text-[10px] md:text-xs font-bold transition-all shadow-lg hover:scale-[1.02]"
+                            className="ml-1 sm:ml-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 md:px-5 md:py-2.5 rounded-full bg-zoomBlue hover:bg-zoomBlueHover text-white text-[10px] md:text-xs font-bold transition-all shadow-lg hover:scale-[1.02]"
+                            title="Usage Reports"
                         >
-                            📊 Usage Reports
+                            <span className="md:hidden">📊</span>
+                            <span className="hidden md:inline">📊 Usage Reports</span>
                         </button>
                     )}
                 </div>
 
                 {/* End / Leave button */}
-                <div>
+                <div className="shrink-0">
                     <button 
                         onClick={() => {
                             if (confirm("Leave this meeting session?")) {
                                 onLeave();
                             }
                         }}
-                        className="px-4 py-2 md:px-6 md:py-2 rounded-full bg-zoomRed hover:bg-red-600 text-white text-[10px] md:text-xs font-extrabold transition-all shadow-lg hover:scale-[1.02]"
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2 rounded-full bg-zoomRed hover:bg-red-600 text-white text-[10px] md:text-xs font-extrabold transition-all shadow-lg hover:scale-[1.02]"
                     >
                         Leave
                     </button>
