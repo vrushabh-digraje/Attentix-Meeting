@@ -249,6 +249,15 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     handler.socket.on('warning-limit-reached', (data: any) => {
                         setStudentWarningsAlert(data);
                     });
+
+                    handler.socket.on('cancel-join-request', (data: any) => {
+                        setJoinRequest(prev => {
+                            if (prev && prev.user_id === data.user_id) {
+                                return null;
+                            }
+                            return prev;
+                        });
+                    });
                 }
 
             } catch (err: any) {
@@ -664,6 +673,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const handleDismissWarning = () => {
         consecutiveDistractions.current = 0;
         setShowWarning(false);
+    };
+
+    // Cancel Join Request
+    const handleCancelRequest = () => {
+        if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('cancel-join-request', {
+                meeting_id: meeting.meetingId,
+                user_id: user.id
+            });
+        }
+        onLeave();
     };
 
     // Kick Participant
@@ -1168,7 +1188,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         You have requested to join this meeting. Please wait for the host to admit you to the session.
                     </p>
                     <button 
-                        onClick={onLeave}
+                        onClick={handleCancelRequest}
                         className="mt-8 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold transition-all border border-white/5"
                     >
                         Cancel Request

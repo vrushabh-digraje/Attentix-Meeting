@@ -1120,6 +1120,28 @@ async def handle_warning_limit_reached(sid, data):
         'username': data.get('username')
     }, room=room, skip_sid=sid)
 
+@sio.on('cancel-join-request')
+async def handle_cancel_join_request(sid, data):
+    room = str(data.get('meeting_id'))
+    user_id = data.get('user_id')
+    await sio.emit('cancel-join-request', {'user_id': user_id}, room=room, skip_sid=sid)
+
+@sio.event
+async def disconnect(sid):
+    rooms = sio.get_rooms(sid)
+    target_user_id = None
+    for uid, s in list(user_sids.items()):
+        if s == sid:
+            target_user_id = uid
+            del user_sids[uid]
+            break
+            
+    if target_user_id:
+        print(f"[SOCKET] User {target_user_id} disconnected from rooms: {rooms}")
+        for room in rooms:
+            if room != sid:
+                await sio.emit('cancel-join-request', {'user_id': target_user_id}, room=room)
+
 # Serve React static assets
 dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
 if os.path.exists(dist_path):
