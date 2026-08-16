@@ -375,17 +375,16 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 warnings_count: warningCountRef.current
             });
 
-            // Local warnings trigger (Warnings for low activity when camera is off)
+            // Local warnings trigger (Warnings for low activity when camera is off - 15s for testing)
             if (activityScore < 20) {
                 if (belowThresholdStartTimeRef.current === null) {
                     belowThresholdStartTimeRef.current = Date.now();
-                } else if (Date.now() - belowThresholdStartTimeRef.current >= 180000) { // 3 mins threshold
+                } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
                     triggerInattentionWarning(state);
-                    belowThresholdStartTimeRef.current = Date.now();
+                    belowThresholdStartTimeRef.current = null;
                 }
             } else {
                 belowThresholdStartTimeRef.current = null;
-                setShowWarning(false);
             }
         };
 
@@ -476,18 +475,16 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }));
         }
 
-        // Local Warning Alert logic (Score < 20% continuously for 3 minutes)
-        // Tip for testing: You can change 180000 (3 mins) to 5000 (5 secs) to test the warning popups quickly.
+        // Local Warning Alert logic (Score < 20% continuously for 15 seconds for easy testing)
         if (score < 20 && results.detected) {
             if (belowThresholdStartTimeRef.current === null) {
                 belowThresholdStartTimeRef.current = Date.now();
-            } else if (Date.now() - belowThresholdStartTimeRef.current >= 180000) { // 180,000 milliseconds = 3 minutes
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
                 triggerInattentionWarning(state);
-                belowThresholdStartTimeRef.current = Date.now(); // reset start timer for next warning interval
+                belowThresholdStartTimeRef.current = null; // reset countdown
             }
         } else {
             belowThresholdStartTimeRef.current = null;
-            setShowWarning(false);
         }
 
         // Buffer logs in memory (Every 3 seconds)
