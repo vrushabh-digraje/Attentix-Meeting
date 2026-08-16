@@ -776,7 +776,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     {/* Big Viewport (Active Pinned Video) */}
                     <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-[#090A0F]">
                         {activePin === 'local' ? (
-                            <div className="relative w-full max-w-4xl aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                            <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
                                     ref={localVideoRef} 
                                     className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
@@ -799,7 +799,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             </div>
                         ) : (
                             remotePeers[activePin as number] && (
-                                <div className="relative w-full max-w-4xl aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                                <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                     {remoteCameras[activePin as number] !== false ? (
                                         <ParticipantVideo 
                                             stream={remotePeers[activePin as number].stream} 
