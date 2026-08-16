@@ -725,16 +725,16 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     }
 
     return (
-        <div className="bg-zoomDarkBg text-slate-100 min-h-screen flex flex-col font-sans overflow-hidden select-none relative">
+        <div className="bg-zoomDarkBg text-zoomText min-h-screen flex flex-col font-sans overflow-hidden select-none relative">
             
             {/* Host Alert: Participant Inattention Toast (Renders top center) */}
             {meeting.role === 'host' && studentWarningsAlert && (
-                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 w-[400px] max-w-[90vw] bg-[#2d1b1e] border-2 border-zoomRed p-4 rounded-xl shadow-2xl z-[100] flex flex-col gap-2 animate-bounce">
-                    <div className="flex items-center gap-2 text-zoomRed font-extrabold text-xs uppercase tracking-widest">
+                <div className="fixed top-6 left-1/2 transform -translate-x-1/2 w-[400px] max-w-[90vw] bg-zoomPanel border-2 border-stateRed p-4 rounded-xl shadow-2xl z-[100] flex flex-col gap-2 animate-bounce">
+                    <div className="flex items-center gap-2 text-stateRed font-extrabold text-xs uppercase tracking-widest">
                         <AlertTriangle size={16} /> Attention Alert Notification
                     </div>
-                    <p className="text-slate-200 text-[11.5px] leading-relaxed">
-                        Student <span className="font-bold text-white underline">{studentWarningsAlert.username}</span> has received <span className="text-zoomRed font-black">3 inattention warnings</span> during this meeting!
+                    <p className="text-zoomText text-[11.5px] leading-relaxed">
+                        Student <span className="font-bold text-zoomText underline">{studentWarningsAlert.username}</span> has received <span className="text-stateRed font-black">3 inattention warnings</span> during this meeting!
                     </p>
                     <div className="flex justify-end gap-2 mt-1">
                         <button 
@@ -748,7 +748,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         </button>
                         <button 
                             onClick={() => setStudentWarningsAlert(null)}
-                            className="px-3 py-1 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded text-[10px] font-bold transition-all"
+                            className="px-3 py-1 bg-zoomBorder hover:bg-slate-200 text-zoomText rounded text-[10px] font-bold transition-all"
                         >
                             Dismiss Alert
                         </button>
@@ -757,10 +757,10 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             )}
 
             {/* Center-Top Meeting ID Header */}
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2.5 bg-[#0C0D15]/85 px-4 py-2 rounded-full text-xs font-semibold backdrop-blur-sm border border-zoomBorder shadow-xl">
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2.5 bg-zoomPanel/90 px-4 py-2 rounded-full text-xs font-semibold backdrop-blur-sm border border-zoomBorder shadow-xl text-zoomText">
                 <span className="w-2 h-2 rounded-full bg-stateGreen animate-pulse"></span>
-                <span className="text-slate-300">Room:</span>
-                <span className="text-white font-mono tracking-wider font-extrabold text-[13px]">
+                <span className="text-zoomTextSec">Room:</span>
+                <span className="text-zoomText font-mono tracking-wider font-extrabold text-[13px]">
                     {meeting.roomCode.slice(0,3)}-{meeting.roomCode.slice(3,6)}-{meeting.roomCode.slice(6,9)}
                 </span>
             </div>
@@ -884,7 +884,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     )}
 
                     {/* Big Viewport (Active Pinned Video) */}
-                    <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-[#090A0F]">
+                    <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-zoomDarkBg">
                         {activePin === 'local' ? (
                             <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
@@ -896,13 +896,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                     />
                                 {!videoEnabled && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zoomPanel">
-                                        <div className="w-20 h-20 rounded-full bg-zoomBlue text-white font-black flex items-center justify-center text-3xl border border-white/10 shadow-lg animate-pulse">
+                                        <div className="w-20 h-20 rounded-full bg-zoomBlue text-white font-black flex items-center justify-center text-3xl border border-zoomBorder shadow-lg animate-pulse">
                                             {user.username.charAt(0).toUpperCase()}
                                         </div>
-                                        <span className="text-xs text-slate-400 font-semibold tracking-wide">Camera Off</span>
+                                        <span className="text-xs text-zoomTextSec font-semibold tracking-wide">Camera Off</span>
                                     </div>
                                 )}
-                                <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold z-10">
+                                <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold z-10 text-white">
                                     You (Pinned)
                                 </div>
                                 <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
@@ -917,13 +917,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         />
                                     ) : (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zoomPanel">
-                                            <div className="w-20 h-20 rounded-full bg-zoomCard border border-zoomBorder text-white font-black flex items-center justify-center text-3xl shadow-lg">
+                                            <div className="w-20 h-20 rounded-full bg-zoomCard border border-zoomBorder text-zoomText font-black flex items-center justify-center text-3xl shadow-lg">
                                                 {remotePeers[activePin as number].peerName.charAt(0).toUpperCase()}
                                             </div>
-                                            <span className="text-xs text-slate-500 font-semibold tracking-wide">Camera Off</span>
+                                            <span className="text-xs text-zoomTextSec font-semibold tracking-wide">Camera Off</span>
                                         </div>
                                     )}
-                                    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold">
+                                    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold text-white">
                                         {remotePeers[activePin as number].peerName}
                                     </div>
                                 </div>
@@ -932,13 +932,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                         {/* Warning Alert Popup (Zoom notification toast at bottom-left) */}
                         {showWarning && (
-                            <div className="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-[#242428]/95 shadow-2xl z-50 flex flex-col items-center text-center">
-                                <div className="text-zoomRed text-xl mb-1"><AlertTriangle /></div>
-                                <h3 className="text-zoomRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>
-                                <p className="text-slate-300 text-xs leading-relaxed mb-4">{warningMsg}</p>
+                            <div className="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-zoomPanel shadow-2xl z-50 flex flex-col items-center text-center">
+                                <div className="text-stateRed text-xl mb-1"><AlertTriangle /></div>
+                                <h3 className="text-stateRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>
+                                <p className="text-zoomText text-xs leading-relaxed mb-4">{warningMsg}</p>
                                 <button 
                                     onClick={handleDismissWarning}
-                                    className="w-full py-2 bg-zoomDarkBg hover:bg-zoomCard border border-white/10 text-slate-300 hover:text-white rounded-lg font-bold text-[11px] transition-all"
+                                    className="w-full py-2 bg-zoomControlBar hover:bg-slate-200 border border-zoomBorder text-zoomText rounded-lg font-bold text-[11px] transition-all"
                                 >
                                     Dismiss Warning
                                 </button>
@@ -950,30 +950,30 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 {/* Right Area: Participants list panel */}
                 {showParticipantsSidebar && (
                     <div className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:relative md:w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
-                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-[#18181a]">
-                            <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-zoomControlBar">
+                            <h3 className="font-bold text-xs text-zoomText uppercase tracking-wider flex items-center gap-1.5">
                                 <Users size={14} className="text-zoomBlue" /> Participants ({peerIds.length + 1})
                             </h3>
-                            <button onClick={() => setShowParticipantsSidebar(false)} className="text-zoomTextSec hover:text-white text-xs font-semibold">✕</button>
+                            <button onClick={() => setShowParticipantsSidebar(false)} className="text-zoomTextSec hover:text-zoomText text-xs font-semibold">✕</button>
                         </div>
                         
                         <div className="flex-grow overflow-y-auto p-4 space-y-3">
                             {/* Invite Option for Participants/Host */}
                             <button 
                                 onClick={handleCopyInviteLink}
-                                className="w-full py-2.5 mb-4 bg-zoomBlue/15 hover:bg-zoomBlue/25 border border-zoomBlue/30 text-zoomBlue hover:text-white rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-2 shadow-sm"
+                                className="w-full py-2.5 mb-4 bg-zoomBlue/15 hover:bg-zoomBlue/25 border border-zoomBlue/30 text-zoomBlue rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-2 shadow-sm"
                             >
                                 <Share2 size={13} /> Copy Invite Link
                             </button>
 
                             {/* Local User Box */}
-                            <div className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-white/5 shadow-md">
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-zoomBorder shadow-md">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-zoomBlue text-white font-bold flex items-center justify-center text-xs border border-white/10">
+                                    <div className="w-7 h-7 rounded-full bg-zoomBlue text-white font-bold flex items-center justify-center text-xs border border-zoomBorder">
                                         {user.username.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-white leading-none">{user.username}</span>
+                                        <span className="text-xs font-bold text-zoomText leading-none">{user.username}</span>
                                         <span className="text-[9px] text-zoomTextSec mt-0.5 font-medium uppercase tracking-wider">{meeting.role} (You)</span>
                                     </div>
                                 </div>
@@ -987,13 +987,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 const peerObj = remotePeers[peerId];
                                 const isCamOn = remoteCameras[peerId] !== false;
                                 return (
-                                    <div key={peerId} className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-white/5 shadow-md">
+                                    <div key={peerId} className="flex justify-between items-center p-3 rounded-lg bg-zoomCard border border-zoomBorder shadow-md">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-full bg-[#2a2a2e] text-white font-bold flex items-center justify-center text-xs border border-white/10">
+                                            <div className="w-7 h-7 rounded-full bg-zoomBorder text-zoomText font-bold flex items-center justify-center text-xs border border-zoomBorder">
                                                 {peerObj.peerName.charAt(0).toUpperCase()}
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-white leading-none">{peerObj.peerName}</span>
+                                                <span className="text-xs font-bold text-zoomText leading-none">{peerObj.peerName}</span>
                                                 <span className="text-[9px] text-zoomTextSec mt-0.5 font-medium uppercase tracking-wider">Participant</span>
                                             </div>
                                         </div>
@@ -1004,7 +1004,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                             {meeting.role === 'host' && (
                                                 <button 
                                                     onClick={() => handleKickParticipant(peerId)}
-                                                    className="text-[9px] text-zoomRed hover:underline font-bold px-1.5 py-0.5 rounded bg-stateRed/5 hover:bg-stateRed/15 border border-stateRed/20 transition-all ml-1"
+                                                    className="text-[9px] text-stateRed hover:underline font-bold px-1.5 py-0.5 rounded bg-stateRed/5 hover:bg-stateRed/15 border border-stateRed/20 transition-all ml-1"
                                                 >
                                                     Kick
                                                 </button>
@@ -1020,11 +1020,11 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 {/* Right Area: Chat Sidebar Panel */}
                 {showChatSidebar && (
                     <div className="fixed inset-y-0 right-0 w-80 max-w-[85vw] md:relative md:w-80 border-l border-zoomBorder bg-zoomPanel flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 shadow-2xl md:shadow-none">
-                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-[#18181a]">
-                            <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+                        <div className="p-4 border-b border-zoomBorder flex justify-between items-center bg-zoomControlBar">
+                            <h3 className="font-bold text-xs text-zoomText uppercase tracking-wider flex items-center gap-1.5">
                                 💬 Meeting Chat
                             </h3>
-                            <button onClick={() => setShowChatSidebar(false)} className="text-zoomTextSec hover:text-white text-xs font-semibold">✕</button>
+                            <button onClick={() => setShowChatSidebar(false)} className="text-zoomTextSec hover:text-zoomText text-xs font-semibold">✕</button>
                         </div>
                         
                         <div className="flex-grow overflow-y-auto p-4 space-y-3 flex flex-col">
@@ -1040,7 +1040,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                             <span className="text-[8px] text-zoomTextSec mb-0.5 font-semibold">
                                                 {isSelf ? "You" : msg.username} • {msg.timestamp}
                                             </span>
-                                            <div className={`p-2.5 rounded-lg text-xs leading-normal ${isSelf ? 'bg-zoomBlue text-white rounded-tr-none' : 'bg-zoomCard border border-white/5 text-slate-100 rounded-tl-none'}`}>
+                                            <div className={`p-2.5 rounded-lg text-xs leading-normal ${isSelf ? 'bg-zoomBlue text-white rounded-tr-none' : 'bg-zoomCard border border-zoomBorder text-zoomText rounded-tl-none'}`}>
                                                 {msg.message}
                                             </div>
                                         </div>
@@ -1049,13 +1049,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             )}
                         </div>
 
-                        <form onSubmit={handleSendChatMessage} className="p-4 border-t border-zoomBorder bg-[#18181a] flex gap-2">
+                        <form onSubmit={handleSendChatMessage} className="p-4 border-t border-zoomBorder bg-zoomControlBar flex gap-2">
                             <input 
                                 type="text"
                                 value={chatInput}
                                 onChange={e => setChatInput(e.target.value)}
                                 placeholder="Type message..."
-                                className="flex-grow px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-xs text-white outline-none focus:border-zoomBlue"
+                                className="flex-grow px-3 py-2 rounded-lg bg-zoomCard border border-zoomBorder text-xs text-zoomText outline-none focus:border-zoomBlue"
                             />
                             <button type="submit" className="px-3 py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white rounded-lg text-xs font-bold transition-all">
                                         Send
@@ -1072,14 +1072,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleToggleAudio}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}
                         title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
                     >
                         {audioEnabled ? <Mic size={14} className="sm:size-[16px] md:size-[18px]" /> : <MicOff size={14} className="sm:size-[16px] md:size-[18px]" />}
                     </button>
                     <button 
                         onClick={handleToggleVideo}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-red-500/20 border border-red-500/30 text-red-500'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}
                         title={videoEnabled ? "Stop Camera" : "Start Camera"}
                     >
                         {videoEnabled ? <VideoIcon size={14} className="sm:size-[16px] md:size-[18px]" /> : <VideoOff size={14} className="sm:size-[16px] md:size-[18px]" />}
@@ -1090,14 +1090,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleCopyInviteLink}
-                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText transition-all"
                         title="Copy Invite Link"
                     >
                         <Share2 size={14} className="sm:size-[16px] md:size-[18px]" />
                     </button>
                     <button 
                         onClick={handleToggleScreenShare}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
                         title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
                     >
                         <span className="text-xs sm:text-sm md:text-base">🖥️</span>
@@ -1107,7 +1107,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             setShowChatSidebar(!showChatSidebar);
                             setShowParticipantsSidebar(false);
                         }}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
                         title="Open Chat"
                     >
                         <span className="text-xs sm:text-sm md:text-base">💬</span>
@@ -1117,7 +1117,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             setShowParticipantsSidebar(!showParticipantsSidebar);
                             setShowChatSidebar(false);
                         }}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
                         title="Show Participants"
                     >
                         <Users size={14} className="sm:size-[16px] md:size-[18px]" />
@@ -1129,7 +1129,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     {meeting.role === 'host' && (
                         <button 
                             onClick={() => setShowScoreboard(!showScoreboard)}
-                            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
                             title="Toggle Scoreboard"
                         >
                             <span className="text-xs sm:text-sm md:text-base">📊</span>
@@ -1167,13 +1167,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             {/* Host Admittance Request Popup Overlay */}
             {meeting.role === 'host' && joinRequest && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="bg-[#151622] border-2 border-zoomBlue p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center mx-4">
+                    <div className="bg-zoomPanel border-2 border-zoomBlue p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center mx-4">
                         <div className="w-12 h-12 rounded-full bg-zoomBlue/15 text-zoomBlue flex items-center justify-center text-xl mx-auto mb-3">
                             👤
                         </div>
-                        <h3 className="text-white font-extrabold text-base tracking-wide mb-1">Admittance Request</h3>
-                        <p className="text-slate-400 text-xs mb-6">
-                            Student <strong className="text-white">{joinRequest.username}</strong> is asking to join this meeting.
+                        <h3 className="text-zoomText font-extrabold text-base tracking-wide mb-1">Admittance Request</h3>
+                        <p className="text-zoomTextSec text-xs mb-6">
+                            Student <strong className="text-zoomText">{joinRequest.username}</strong> is asking to join this meeting.
                         </p>
                         <div className="flex gap-3">
                             <button 
@@ -1184,7 +1184,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             </button>
                             <button 
                                 onClick={() => handleDeclineJoin(joinRequest.user_id)}
-                                className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-lg text-xs font-bold transition-all border border-white/10"
+                                className="flex-1 py-2 bg-zoomControlBar hover:bg-slate-200 text-zoomText rounded-lg text-xs font-bold transition-all border border-zoomBorder"
                             >
                                 Decline
                             </button>
@@ -1195,15 +1195,15 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
             {/* Participant Waiting Room Overlay */}
             {waitingRoomState === 'waiting' && (
-                <div className="fixed inset-0 bg-[#090A0F] z-50 flex flex-col items-center justify-center p-6 text-center">
+                <div className="fixed inset-0 bg-zoomDarkBg z-50 flex flex-col items-center justify-center p-6 text-center">
                     <div className="w-16 h-16 rounded-full border-4 border-zoomBlue border-t-transparent animate-spin mb-6"></div>
-                    <h2 className="text-xl font-extrabold text-white mb-2">Waiting for Host...</h2>
-                    <p className="text-slate-400 text-xs max-w-sm">
+                    <h2 className="text-xl font-extrabold text-zoomText mb-2">Waiting for Host...</h2>
+                    <p className="text-zoomTextSec text-xs max-w-sm">
                         You have requested to join this meeting. Please wait for the host to admit you to the session.
                     </p>
                     <button 
                         onClick={handleCancelRequest}
-                        className="mt-8 px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold transition-all border border-white/5"
+                        className="mt-8 px-6 py-2.5 bg-zoomControlBar hover:bg-slate-200 text-zoomText rounded-full text-xs font-bold transition-all border border-zoomBorder"
                     >
                         Cancel Request
                     </button>
@@ -1212,12 +1212,12 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
             {/* Participant Request Declined Overlay */}
             {waitingRoomState === 'declined' && (
-                <div className="fixed inset-0 bg-[#090A0F] z-50 flex flex-col items-center justify-center p-6 text-center">
+                <div className="fixed inset-0 bg-zoomDarkBg z-50 flex flex-col items-center justify-center p-6 text-center">
                     <div className="w-14 h-14 rounded-full bg-stateRed/15 text-stateRed flex items-center justify-center text-2xl mb-4">
                         ❌
                     </div>
                     <h2 className="text-xl font-extrabold text-stateRed mb-2">Request Declined</h2>
-                    <p className="text-slate-400 text-xs max-w-xs leading-relaxed">
+                    <p className="text-zoomTextSec text-xs max-w-xs leading-relaxed">
                         Your request to join this meeting was declined by the host.
                     </p>
                     <button 
@@ -1231,13 +1231,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
             {/* Floating Chat Message Toast Popup */}
             {chatNotification && (
-                <div className="fixed bottom-24 left-6 bg-[#0E0F16]/95 border border-zoomBlue/30 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-fade-in backdrop-blur-md max-w-sm transition-all duration-300">
+                <div className="fixed bottom-24 left-6 bg-zoomPanel border border-zoomBorder text-zoomText px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-fade-in backdrop-blur-md max-w-sm transition-all duration-300">
                     <div className="w-8 h-8 rounded-full bg-zoomBlue/15 text-zoomBlue flex items-center justify-center font-bold text-xs shrink-0 border border-zoomBlue/20">
                         💬
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black text-zoomBlue uppercase tracking-wider">{chatNotification.username}</span>
-                        <span className="text-[11px] text-slate-200 truncate mt-0.5">{chatNotification.message}</span>
+                        <span className="text-[11px] text-zoomTextSec truncate mt-0.5">{chatNotification.message}</span>
                     </div>
                 </div>
             )}
