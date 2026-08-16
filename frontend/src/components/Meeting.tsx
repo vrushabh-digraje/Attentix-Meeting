@@ -105,6 +105,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [chatInput, setChatInput] = useState<string>('');
     const [showChatSidebar, setShowChatSidebar] = useState<boolean>(false);
     const [studentWarningsAlert, setStudentWarningsAlert] = useState<{ username: string, user_id: number } | null>(null);
+    const [chatNotification, setChatNotification] = useState<{ username: string, message: string } | null>(null);
 
     // Refs to avoid state updates lagging inside callbacks
     const consecutiveDistractions = useRef<number>(0);
@@ -238,6 +239,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                     handler.socket.on('chat-message', (data: any) => {
                         setChatMessages(prev => [...prev, data]);
+                        if (data.user_id !== user.id) {
+                            setChatNotification({ username: data.username, message: data.message });
+                        }
                     });
 
                     handler.socket.on('warning-limit-reached', (data: any) => {
@@ -273,13 +277,26 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     }, [localStream, pinnedPeerId, videoEnabled]);
 
     // 2. Start local Attention Tracking asynchronously in background (Only for participants!)
+    // A 1.5-second timeout delay is used to ensure the waiting room overlay has fully unmounted
+    // and both video/canvas DOM element refs are fully painted and available in React's lifecycle.
     useEffect(() => {
         if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved') return;
 
-        const engine = new AttentionEngine();
-        attentionEngineRef.current = engine;
+        let activeEngine: AttentionEngine | null = null;
+        let isCancelled = false;
 
-        if (localVideoRef.current && canvasRef.current) {
+        const initTimer = setTimeout(() => {
+            if (isCancelled) return;
+
+            if (!localVideoRef.current || !canvasRef.current) {
+                console.warn("React elements not fully painted yet, skipping MediaPipe init.");
+                return;
+            }
+
+            const engine = new AttentionEngine();
+            attentionEngineRef.current = engine;
+            activeEngine = engine;
+
             engine.initialize(localVideoRef.current, canvasRef.current, (results) => {
                 handleAttentionResults(results);
             }).then(() => {
@@ -287,14 +304,26 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }).catch(err => {
                 console.error("MediaPipe failed to load in background: ", err);
             });
-        }
+        }, 1500);
 
         return () => {
-            if (attentionEngineRef.current) {
-                attentionEngineRef.current.stop();
+            isCancelled = true;
+            clearTimeout(initTimer);
+            if (activeEngine) {
+                activeEngine.stop();
             }
         };
     }, [localStream, waitingRoomState]);
+
+    // Auto-dismiss chat notification toast after 2 seconds
+    useEffect(() => {
+        if (chatNotification) {
+            const timer = setTimeout(() => {
+                setChatNotification(null);
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [chatNotification]);
 
     // Periodically flush buffered attention logs to database (Every 15 seconds)
     useEffect(() => {
@@ -1081,6 +1110,19 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     >
                         Back to Lobby
                     </button>
+                </div>
+            )}
+
+            {/* Floating Chat Message Toast Popup */}
+            {chatNotification && (
+                <div className="fixed bottom-24 left-6 bg-[#0E0F16]/95 border border-zoomBlue/30 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-fade-in backdrop-blur-md max-w-sm transition-all duration-300">
+                    <div className="w-8 h-8 rounded-full bg-zoomBlue/15 text-zoomBlue flex items-center justify-center font-bold text-xs shrink-0 border border-zoomBlue/20">
+                        💬
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] font-black text-zoomBlue uppercase tracking-wider">{chatNotification.username}</span>
+                        <span className="text-[11px] text-slate-200 truncate mt-0.5">{chatNotification.message}</span>
+                    </div>
                 </div>
             )}
         </div>
