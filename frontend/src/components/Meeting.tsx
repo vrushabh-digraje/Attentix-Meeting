@@ -399,10 +399,10 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 warnings_count: warningCountRef.current
             });
 
-            // Local warnings trigger (Warnings for camera off - 15s for testing)
+            // Local warnings trigger (Warnings for camera off - 2 mins threshold)
             if (belowThresholdStartTimeRef.current === null) {
                 belowThresholdStartTimeRef.current = Date.now();
-            } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 120000) { // 2 minutes (120,000 ms)
                 triggerInattentionWarning(state);
                 belowThresholdStartTimeRef.current = null;
             }
@@ -498,11 +498,11 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }));
         }
 
-        // Local Warning Alert logic (Score < 20% continuously for 15 seconds for easy testing)
+        // Local Warning Alert logic (Score < 20% continuously for 2 minutes)
         if (score < 20 && results.detected) {
             if (belowThresholdStartTimeRef.current === null) {
                 belowThresholdStartTimeRef.current = Date.now();
-            } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 120000) { // 2 minutes (120,000 ms)
                 triggerInattentionWarning(state);
                 belowThresholdStartTimeRef.current = null; // reset countdown
             }

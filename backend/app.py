@@ -945,6 +945,7 @@ async def get_analytics(meeting_id: int):
 
 # Socket.IO Event Handlers (Asynchronous)
 user_sids = {}
+approved_participants = {} # room -> set of user_ids
 
 @sio.on('join-room')
 async def handle_join_room(sid, data):
@@ -974,29 +975,45 @@ async def handle_join_room(sid, data):
             'socket_id': sid
         }, room=room, skip_sid=sid)
     else:
-        print(f"[SOCKET] Participant {username} ({user_id}) asking to join room {room}")
-        host_id = None
-        session = db_manager.get_session()
-        try:
-            meeting = session.query(Meeting).filter(Meeting.id == int(room)).first()
-            if meeting:
-                host_id = meeting.host_id
-        finally:
-            session.close()
-            
-        if host_id:
-            host_sid = user_sids.get(host_id)
-            if host_sid:
-                await sio.emit('join-request', {
-                    'user_id': user_id,
-                    'username': username
-                }, to=host_sid)
+        # Check if participant is already approved (bypass waiting room on reconnect)
+        is_already_approved = room in approved_participants and user_id in approved_participants[room]
+        
+        if is_already_approved:
+            print(f"[SOCKET] Reconnecting approved participant {username} ({user_id}) to room {room}")
+            await sio.emit('join-approved', {}, to=sid)
+            await sio.emit('peer-joined', {
+                'user_id': user_id,
+                'username': username,
+                'socket_id': sid
+            }, room=room, skip_sid=sid)
+        else:
+            print(f"[SOCKET] Participant {username} ({user_id}) asking to join room {room}")
+            host_id = None
+            session = db_manager.get_session()
+            try:
+                meeting = session.query(Meeting).filter(Meeting.id == int(room)).first()
+                if meeting:
+                    host_id = meeting.host_id
+            finally:
+                session.close()
+                
+            if host_id:
+                host_sid = user_sids.get(host_id)
+                if host_sid:
+                    await sio.emit('join-request', {
+                        'user_id': user_id,
+                        'username': username
+                    }, to=host_sid)
 
 @sio.on('leave-room')
 async def handle_leave_room(sid, data):
     room = str(data.get('meeting_id'))
     user_id = data.get('user_id')
     
+    # Remove from approved participants list as they clicked "Leave" intentionally
+    if room in approved_participants:
+        approved_participants[room].discard(user_id)
+
     await sio.leave_room(sid, room)
     
     session = db_manager.get_session()
@@ -1053,6 +1070,11 @@ async def handle_approve_join(sid, data):
     target_sid = user_sids.get(target_id)
     if target_sid:
         print(f"[SOCKET] Host approved join for {target_id}")
+        
+        if room not in approved_participants:
+            approved_participants[room] = set()
+        approved_participants[room].add(target_id)
+
         await sio.emit('join-approved', {}, to=target_sid)
         
         # Look up username to broadcast peer-joined
@@ -1083,6 +1105,11 @@ async def handle_decline_join(sid, data):
 async def handle_kick_participant(sid, data):
     room = str(data.get('meeting_id'))
     user_id = data.get('user_id')
+    
+    # Remove from approved participants list so they must request to join again if they try to reconnect
+    if room in approved_participants:
+        approved_participants[room].discard(user_id)
+
     await sio.emit('participant-kicked', {'user_id': user_id}, room=room)
 
 @sio.on('camera-state-change')
