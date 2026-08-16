@@ -871,7 +871,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 >
                                     <video 
                                         ref={localVideoRef} 
-                                        className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                        className={`w-full h-full object-cover transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
                                         autoPlay 
                                         playsInline 
                                         muted 
@@ -928,7 +928,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
                                     ref={localVideoRef} 
-                                    className={`w-full h-full object-cover transform scale-x-[-1] ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                    className={`w-full h-full object-cover transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
                                     autoPlay 
                                     playsInline 
                                     muted 
