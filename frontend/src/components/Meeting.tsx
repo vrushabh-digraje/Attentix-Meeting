@@ -109,6 +109,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
     // Refs to avoid state updates lagging inside callbacks
     const consecutiveDistractions = useRef<number>(0);
+    const belowThresholdStartTimeRef = useRef<number | null>(null);
     const warningCountRef = useRef<number>(0);
     const lastLogTime = useRef<number>(0);
     const lastSocketEmitTime = useRef<number>(0);
@@ -396,14 +397,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             }));
         }
 
-        // Local Warning Alert Counter logic (Throttled: 6 frames ≈ 2 seconds at 3 FPS)
-        if (state !== 'Attentive' && results.detected) {
-            consecutiveDistractions.current++;
-            if (consecutiveDistractions.current === 6) {
+        // Local Warning Alert logic (Score < 20% continuously for 3 minutes)
+        // Tip for testing: You can change 180000 (3 mins) to 5000 (5 secs) to test the warning popups quickly.
+        if (score < 20 && results.detected) {
+            if (belowThresholdStartTimeRef.current === null) {
+                belowThresholdStartTimeRef.current = Date.now();
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 180000) { // 180,000 milliseconds = 3 minutes
                 triggerInattentionWarning(state);
+                belowThresholdStartTimeRef.current = Date.now(); // reset start timer for next warning interval
             }
         } else {
-            consecutiveDistractions.current = 0;
+            belowThresholdStartTimeRef.current = null;
             setShowWarning(false);
         }
 
