@@ -7,20 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        zoomBlue: '#D97706',         // Bronze Amber (Active buttons & Highlights)
-        zoomBlueHover: '#B45309',    // Dark Amber Hover state
-        zoomOrange: '#06B6D4',       // Soft Cyan (Focus highlights / Alerts)
-        zoomOrangeHover: '#0891B2',  // Dark Cyan Hover
-        zoomDarkBg: '#FAF9F6',       // Alabaster/Cream 50 (Soft, organic background)
+        zoomBlue: '#0284C7',         // Sky Blue (Active buttons & Highlights)
+        zoomBlueHover: '#0369A1',    // Deep Sky Hover state
+        zoomOrange: '#F97316',       // Amber (Warnings / Alerts)
+        zoomOrangeHover: '#EA580C',  // Dark Amber Hover
+        zoomDarkBg: '#F0F9FF',       // Sky 50 (Refreshing icy-blue background)
         zoomCard: '#FFFFFF',         // Crisp White Cards
         zoomPanel: '#FFFFFF',        // Crisp White Sidebar
-        zoomControlBar: '#F5F4F0',   // Alabaster/Warm-Stone 100 (Control bar background)
-        zoomBorder: '#E6E4DC',       // Stone 200 (Soft organic borders)
-        zoomText: '#1C1917',         // Stone 900 (Very dark warm gray primary text)
-        zoomTextSec: '#57534E',      // Stone 600 (Secondary descriptive text)
-        stateGreen: '#15803D',       // Sage Green
-        stateYellow: '#CA8A04',      // Soft Yellow-Gold
-        stateRed: '#BE123C',         // Burgundy/Rose Red
+        zoomControlBar: '#E0F2FE',   // Sky 100 (Control bar background)
+        zoomBorder: '#BAE6FD',       // Soft Frost-Blue borders
+        zoomText: '#0C4A6E',         // Sky 900 (Deep steel blue primary text)
+        zoomTextSec: '#0369A1',      // Sky 700 (Secondary text)
+        stateGreen: '#0D9488',       // Teal Green
+        stateYellow: '#D97706',      // Dark Amber
+        stateRed: '#E11D48',         // Bright Rose
       },
       fontFamily: {
         sans: ['SF Pro Display', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

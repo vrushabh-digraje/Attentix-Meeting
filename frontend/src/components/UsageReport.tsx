@@ -334,24 +334,24 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
     <meta charset="UTF-8">
     <title>Attentix Classroom Engagement Report - ${meeting.roomCode}</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #FAF9F6; color: #1C1917; margin: 0; padding: 40px; }
-        .container { max-width: 800px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E6E4DC; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(87,83,78,0.05); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #D97706; padding-bottom: 20px; margin-bottom: 30px; }
-        .title { font-size: 24px; font-weight: 800; color: #D97706; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F0F9FF; color: #0C4A6E; margin: 0; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; background: #FFFFFF; border: 1px solid #BAE6FD; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(3,105,161,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284C7; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 24px; font-weight: 800; color: #0284C7; margin: 0; }
         .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
-        .meta-card { background: #F5F4F0; border: 1px solid #E6E4DC; padding: 15px; border-radius: 8px; }
-        .meta-label { font-size: 10px; font-weight: 700; color: #57534E; text-transform: uppercase; letter-spacing: 0.05em; }
-        .meta-val { font-size: 20px; font-weight: 800; color: #1C1917; margin-top: 4px; }
+        .meta-card { background: #E0F2FE; border: 1px solid #BAE6FD; padding: 15px; border-radius: 8px; }
+        .meta-label { font-size: 10px; font-weight: 700; color: #0369A1; text-transform: uppercase; letter-spacing: 0.05em; }
+        .meta-val { font-size: 20px; font-weight: 800; color: #0C4A6E; margin-top: 4px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #E6E4DC; }
-        th { font-size: 10px; font-weight: 700; color: #57534E; text-transform: uppercase; background: #F5F4F0; letter-spacing: 0.05em; }
+        th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #BAE6FD; }
+        th { font-size: 10px; font-weight: 700; color: #0369A1; text-transform: uppercase; background: #E0F2FE; letter-spacing: 0.05em; }
         td { font-size: 13px; font-weight: 500; }
         .status-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-        .status-attentive { background: #E8F5E9; color: #15803D; }
-        .status-distracted { background: #FEF3C7; color: #CA8A04; }
-        .status-inactive { background: #FCE8E6; color: #BE123C; }
-        .print-btn { display: block; width: 100%; text-align: center; margin-top: 40px; padding: 12px; background: #D97706; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px; transition: background 0.2s; }
-        .print-btn:hover { background: #B45309; }
+        .status-attentive { background: #E2F0D9; color: #0D9488; }
+        .status-distracted { background: #FEF3C7; color: #D97706; }
+        .status-inactive { background: #FCE8E6; color: #E11D48; }
+        .print-btn { display: block; width: 100%; text-align: center; margin-top: 40px; padding: 12px; background: #0284C7; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px; transition: background 0.2s; }
+        .print-btn:hover { background: #0369A1; }
         @media print { .print-btn { display: none; } }
     </style>
 </head>
