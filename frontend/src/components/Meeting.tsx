@@ -370,46 +370,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         };
     }, [localStream, waitingRoomState, videoEnabled]);
 
-    // Track browser focus/mouse/keyboard activity for fallback attention tracking
-    useEffect(() => {
-        const handleUserActivity = () => {
-            lastActivityTime.current = Date.now();
-        };
-
-        window.addEventListener('mousemove', handleUserActivity);
-        window.addEventListener('keydown', handleUserActivity);
-        window.addEventListener('click', handleUserActivity);
-        window.addEventListener('scroll', handleUserActivity);
-        window.addEventListener('touchstart', handleUserActivity);
-
-        return () => {
-            window.removeEventListener('mousemove', handleUserActivity);
-            window.removeEventListener('keydown', handleUserActivity);
-            window.removeEventListener('click', handleUserActivity);
-            window.removeEventListener('scroll', handleUserActivity);
-            window.removeEventListener('touchstart', handleUserActivity);
-        };
-    }, []);
-
-    // Fallback Attention Loop when camera is OFF (Score updates according to movement)
+    // Fallback Attention Loop when camera is OFF (Score immediately falls to 0%)
     useEffect(() => {
         if (meeting.role === 'host' || waitingRoomState !== 'approved' || videoEnabled) return;
 
-        console.log("Camera is off. Starting movement/interaction fallback attention scoring.");
+        console.log("Camera is off. Forcing attention score to 0%.");
 
         const fallbackScoringLoop = () => {
-            const timeSinceLastActivity = Date.now() - lastActivityTime.current;
-            
-            // Stays 100% for 8 seconds, decays to 0% after 28 seconds of idle time
-            let activityScore = 100;
-            if (timeSinceLastActivity > 8000) {
-                const idleSeconds = (timeSinceLastActivity - 8000) / 1000;
-                activityScore = Math.max(0, Math.round(100 - (idleSeconds * 5))); // 5% decay per second
-            }
+            const activityScore = 0;
+            const state = 'Inactive';
 
-            const state = activityScore >= 75 ? 'Attentive' : (activityScore >= 45 ? 'Distracted' : 'Inactive');
-
-            // Emit to host scoreboard via socket
+            // Emit 0% attention score to host scoreboard via socket
             if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
                 webrtcHandlerRef.current.socket.emit('attention-score-update', {
                     meeting_id: meeting.meetingId,
@@ -419,7 +390,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 });
             }
 
-            // Write log to database queue
+            // Write 0% log to database queue
             logsBufferRef.current.push({
                 meeting_id: meeting.meetingId,
                 user_id: user.id,
@@ -428,18 +399,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 warnings_count: warningCountRef.current
             });
 
-            // Local warnings trigger (Warnings for low activity when camera is off - 15s for testing)
-            if (activityScore < 20) {
-                if (belowThresholdStartTimeRef.current === null) {
-                    belowThresholdStartTimeRef.current = Date.now();
-                } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
-                    triggerInattentionWarning(state);
-                    belowThresholdStartTimeRef.current = null;
-                }
-            } else {
+            // Local warnings trigger (Warnings for camera off - 15s for testing)
+            if (belowThresholdStartTimeRef.current === null) {
+                belowThresholdStartTimeRef.current = Date.now();
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 15000) { // 15 seconds
+                triggerInattentionWarning(state);
                 belowThresholdStartTimeRef.current = null;
             }
         };
+
+        // Execute immediately when camera is turned off to update host scoreboard instantly
+        fallbackScoringLoop();
 
         const interval = setInterval(fallbackScoringLoop, 2000);
         return () => {
