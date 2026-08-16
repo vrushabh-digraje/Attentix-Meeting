@@ -296,7 +296,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
  
     // Robustly bind the localStream to localVideoRef whenever it mounts or updates (Fixes random self video black screen)
     useEffect(() => {
-        if (localVideoRef.current && localStream) {
+        if (localVideoRef.current && localStream && !isScreenSharing) {
             console.log("Binding localStream to localVideoRef explicitly");
             localVideoRef.current.srcObject = localStream;
             const videoEl = localVideoRef.current;
@@ -309,7 +309,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     failedPlaybacks.add(videoEl);
                 });
         }
-    }, [localStream, pinnedPeerId, videoEnabled]);
+    }, [localStream, pinnedPeerId, videoEnabled, isScreenSharing]);
 
     // Global autoplay retry registration on user interaction
     useEffect(() => {
@@ -335,7 +335,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     // A 1.5-second timeout delay is used to ensure the waiting room overlay has fully unmounted
     // and both video/canvas DOM element refs are fully painted and available in React's lifecycle.
     useEffect(() => {
-        if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved' || !videoEnabled) return;
+        if (!localStream || meeting.role === 'host' || waitingRoomState !== 'approved' || !videoEnabled || isScreenSharing) return;
 
         let activeEngine: AttentionEngine | null = null;
         let isCancelled = false;
@@ -368,7 +368,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 activeEngine.stop();
             }
         };
-    }, [localStream, waitingRoomState, videoEnabled]);
+    }, [localStream, waitingRoomState, videoEnabled, isScreenSharing]);
 
     // Fallback Attention Loop when camera is OFF (Score immediately falls to 0%)
     useEffect(() => {
@@ -416,6 +416,45 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             clearInterval(interval);
         };
     }, [videoEnabled, waitingRoomState, meeting.role]);
+
+    // Fallback Attention Loop when Screen Sharing is active (Forced 100% score)
+    useEffect(() => {
+        if (meeting.role === 'host' || waitingRoomState !== 'approved' || !isScreenSharing) return;
+
+        console.log("Screen sharing active. Forcing attention score to 100%.");
+
+        const emitScreenShareScore = () => {
+            if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                webrtcHandlerRef.current.socket.emit('attention-score-update', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username,
+                    score: 100
+                });
+            }
+        };
+
+        // Emit immediately
+        emitScreenShareScore();
+
+        // Emit every 3 seconds to keep database logs and scoreboard updated
+        const interval = setInterval(() => {
+            emitScreenShareScore();
+
+            // Also buffer logs in memory
+            logsBufferRef.current.push({
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                attention_score: 100,
+                state: 'Attentive',
+                warnings_count: warningCountRef.current
+            });
+        }, 3000);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [isScreenSharing, waitingRoomState, meeting.role]);
 
     // Auto-dismiss chat notification toast after 2 seconds
     useEffect(() => {
@@ -905,7 +944,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold z-10 text-white">
                                     You (Pinned)
                                 </div>
-                                <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
+                                <canvas ref={canvasRef} className={`absolute top-0 left-0 w-full h-full pointer-events-none z-10 ${isScreenSharing ? 'hidden' : 'block'}`}></canvas>
                             </div>
                         ) : (
                             remotePeers[activePin as number] && (
