@@ -4,71 +4,75 @@
 
 @layer utilities {
   .glass-panel {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(9, 10, 15, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(186, 230, 253, 0.8);
-    box-shadow: 0 10px 40px 0 rgba(3, 105, 161, 0.08);
+    border: 1px solid rgba(26, 29, 45, 0.9);
+    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.7);
   }
 
   .premium-bg {
-    background: radial-gradient(circle at top left, #F0F9FF 0%, #E0F2FE 60%, #BAE6FD 100%);
+    background: radial-gradient(circle at top left, #0D0F19 0%, #000000 70%, #000000 100%);
   }
 
   .premium-glow-blue {
-    box-shadow: 0 0 20px rgba(2, 132, 199, 0.15);
+    box-shadow: 0 0 25px rgba(0, 242, 254, 0.2);
   }
 
   .premium-glow-orange {
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.15);
+    box-shadow: 0 0 25px rgba(244, 63, 94, 0.2);
   }
 
   .gradient-text-blue {
-    background: linear-gradient(135deg, #0284C7 0%, #06B6D4 100%);
+    background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .gradient-text-orange {
-    background: linear-gradient(135deg, #F97316 0%, #FBBF24 100%);
+    background: linear-gradient(135deg, #FF0844 0%, #FFB199 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .btn-premium-orange {
-    background: linear-gradient(135deg, #EA580C 0%, #F97316 100%);
-    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.2);
+    background: linear-gradient(135deg, #FF0844 0%, #FFB199 100%);
+    box-shadow: 0 4px 15px rgba(255, 8, 68, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #ffffff;
+    font-weight: 800;
   }
 
   .btn-premium-orange:hover {
-    background: linear-gradient(135deg, #F97316 0%, #FF8F59 100%);
-    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.35);
+    background: linear-gradient(135deg, #FF2E63 0%, #FFC4B3 100%);
+    box-shadow: 0 6px 20px rgba(255, 8, 68, 0.45);
     transform: translateY(-1px);
   }
 
   .btn-premium-blue {
-    background: linear-gradient(135deg, #0284C7 0%, #0EA5E9 100%);
-    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.2);
+    background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
+    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #000000;
+    font-weight: 800;
   }
 
   .btn-premium-blue:hover {
-    background: linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%);
-    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35);
+    background: linear-gradient(135deg, #33F5FF 0%, #7FD0FF 100%);
+    box-shadow: 0 6px 20px rgba(0, 242, 254, 0.45);
     transform: translateY(-1px);
   }
 
   .premium-card {
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(186, 230, 253, 0.8);
+    background: rgba(9, 10, 15, 0.9);
+    border: 1px solid rgba(26, 29, 45, 0.9);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .premium-card:hover {
-    background: rgba(255, 255, 255, 0.99);
-    border-color: rgba(2, 132, 199, 0.35);
-    box-shadow: 0 10px 30px rgba(3, 105, 161, 0.12);
+    background: rgba(12, 13, 21, 0.95);
+    border-color: rgba(0, 242, 254, 0.45);
+    box-shadow: 0 10px 30px rgba(0, 242, 254, 0.15);
     transform: translateY(-2px);
   }
 }

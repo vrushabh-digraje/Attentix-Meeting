@@ -1072,14 +1072,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleToggleAudio}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-[#090A0F] border-2 border-zoomBlue text-zoomBlue shadow-[0_0_15px_rgba(0,242,254,0.25)] hover:bg-[#131520]' : 'bg-[#090A0F] border-2 border-stateRed text-stateRed shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-[#131520]'}`}
                         title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
                     >
                         {audioEnabled ? <Mic size={14} className="sm:size-[16px] md:size-[18px]" /> : <MicOff size={14} className="sm:size-[16px] md:size-[18px]" />}
                     </button>
                     <button 
                         onClick={handleToggleVideo}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText' : 'bg-red-500/10 border border-red-500/20 text-red-600'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-[#090A0F] border-2 border-zoomBlue text-zoomBlue shadow-[0_0_15px_rgba(0,242,254,0.25)] hover:bg-[#131520]' : 'bg-[#090A0F] border-2 border-stateRed text-stateRed shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-[#131520]'}`}
                         title={videoEnabled ? "Stop Camera" : "Start Camera"}
                     >
                         {videoEnabled ? <VideoIcon size={14} className="sm:size-[16px] md:size-[18px]" /> : <VideoOff size={14} className="sm:size-[16px] md:size-[18px]" />}
@@ -1090,14 +1090,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleCopyInviteLink}
-                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-[#090A0F] border-2 border-zoomBorder hover:border-zoomBlue hover:text-zoomBlue hover:shadow-[0_0_15px_rgba(0,242,254,0.25)] text-zoomText transition-all"
                         title="Copy Invite Link"
                     >
                         <Share2 size={14} className="sm:size-[16px] md:size-[18px]" />
                     </button>
                     <button 
                         onClick={handleToggleScreenShare}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-stateGreen/20 border border-stateGreen/30 text-stateGreen animate-pulse' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-[#090A0F] border-2 border-stateGreen text-stateGreen shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse' : 'bg-[#090A0F] border-2 border-zoomBorder hover:border-zoomBlue hover:text-zoomBlue hover:shadow-[0_0_15px_rgba(0,242,254,0.25)] text-zoomText transition-all'}`}
                         title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
                     >
                         <span className="text-xs sm:text-sm md:text-base">🖥️</span>
