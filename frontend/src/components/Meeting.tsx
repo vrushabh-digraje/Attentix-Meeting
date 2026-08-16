@@ -776,14 +776,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 <h3 className="font-bold text-xs text-zoomOrange uppercase tracking-widest flex items-center gap-1.5">
                                     📊 Attention Scoreboard
                                 </h3>
-                                <p className="text-[9px] text-zoomTextSec mt-1 leading-snug">Real-time engagement scores of all participants</p>
+                                <p className="text-[9px] text-slate-400 mt-1 leading-snug">Real-time engagement scores of all participants</p>
                             </div>
-                            <button onClick={() => setShowScoreboard(false)} className="md:hidden text-zoomTextSec hover:text-white text-xs font-semibold px-2">✕</button>
+                            <button onClick={() => setShowScoreboard(false)} className="md:hidden text-slate-400 hover:text-white text-xs font-semibold px-2">✕</button>
                         </div>
                         
                         <div className="flex-grow overflow-y-auto p-4 space-y-2">
                             {Object.entries(participantScores).filter(([pId]) => Number(pId) !== user.id).length === 0 ? (
-                                <div className="text-center py-8 text-zoomTextSec text-[10px]">
+                                <div className="text-center py-8 text-slate-400 text-[10px]">
                                     Waiting for attention score updates...
                                 </div>
                             ) : (
@@ -807,7 +807,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                                     <span className="truncate max-w-[145px]">{scoreData.username}</span>
                                                     <span className={`${textColor} font-mono`}>{scorePct}%</span>
                                                 </div>
-                                                <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                                                     <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${scorePct}%` }}></div>
                                                 </div>
                                             </div>
@@ -1156,7 +1156,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 onLeave();
                             }
                         }}
-                        className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2 rounded-full bg-zoomRed hover:bg-red-600 text-white text-[10px] md:text-xs font-extrabold transition-all shadow-lg hover:scale-[1.02]"
+                        className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2 rounded-full bg-[#EF4444] hover:bg-[#DC2626] text-white text-[10px] md:text-xs font-extrabold transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:scale-[1.02]"
                     >
                         Leave
                     </button>
