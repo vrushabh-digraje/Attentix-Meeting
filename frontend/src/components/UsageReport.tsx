@@ -32,7 +32,8 @@ interface DistractionLog {
 }
 
 const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeeting }) => {
-    const apiBase = window.location.origin;
+    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://attentix-meeting.onrender.com';
+    const apiBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
 
     const trendCanvasRef = useRef<HTMLCanvasElement>(null);
     const stateCanvasRef = useRef<HTMLCanvasElement>(null);
