@@ -1,0 +1,30 @@
+{
+  "name": "attentix-desktop",
+  "version": "1.0.0",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently -k \"npm run --prefix ../frontend dev\" \"electron .\"",
+    "build": "npm run --prefix ../frontend build && node -e \"const fs = require('fs'); if (fs.existsSync('./dist')) fs.rmSync('./dist', {recursive: true}); fs.cpSync('../backend/dist', './dist', {recursive: true});\" && electron-builder --dir"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^31.3.1",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.attentix.desktop",
+    "productName": "Attentix",
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "dir"
+    }
+  }
+}

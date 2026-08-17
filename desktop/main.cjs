@@ -9,12 +9,12 @@ function createWindow() {
         height: 720,
         minWidth: 800,
         minHeight: 600,
-        title: "Attentix Meeting",
+        title: "Attentix Desktop",
         backgroundColor: "#000000",
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'electron-preload.cjs'),
+            preload: path.join(__dirname, 'preload.cjs'),
             webSecurity: true
         }
     });
@@ -23,7 +23,7 @@ function createWindow() {
     mainWindow.setMenuBarVisibility(false);
 
     // Switch between dev server and production dist files
-    const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+    const isDev = !app.isPackaged;
     if (isDev) {
         mainWindow.loadURL('http://localhost:5173');
         // Open DevTools in dev mode
