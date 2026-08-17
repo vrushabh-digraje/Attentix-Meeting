@@ -16,7 +16,7 @@ export interface MeetingSession {
 }
 
 const App: React.FC = () => {
-    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://attentix-meeting.onrender.com';
+    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://attentix-backend.onrender.com';
     const apiBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
     
     // Core States
