@@ -105,6 +105,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [joinRequest, setJoinRequest] = useState<{ user_id: number, username: string } | null>(null);
     const [pinnedPeerId, setPinnedPeerId] = useState<string | number>('local');
     const [remoteCameras, setRemoteCameras] = useState<{ [key: number]: boolean }>({});
+    const [remoteScreenShares, setRemoteScreenShares] = useState<{ [key: number]: boolean }>({});
 
     // Warning states
     const [showWarning, setShowWarning] = useState<boolean>(false);
@@ -240,6 +241,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
                     handler.socket.on('camera-state-change', (data: any) => {
                         setRemoteCameras(prev => ({
+                            ...prev,
+                            [data.user_id]: data.enabled
+                        }));
+                    });
+
+                    handler.socket.on('screen-share-change', (data: any) => {
+                        setRemoteScreenShares(prev => ({
                             ...prev,
                             [data.user_id]: data.enabled
                         }));
@@ -668,6 +676,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 
                 if (webrtcHandlerRef.current) {
                     webrtcHandlerRef.current.replaceVideoTrack(screenTrack);
+                    if (webrtcHandlerRef.current.socket) {
+                        webrtcHandlerRef.current.socket.emit('screen-share-change', {
+                            meeting_id: meeting.meetingId,
+                            user_id: user.id,
+                            enabled: true
+                        });
+                    }
                 }
                 
                 setScreenStream(stream);
@@ -701,6 +716,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = localStream;
             }
+        }
+        if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('screen-share-change', {
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                enabled: false
+            });
         }
         setScreenStream(null);
         setIsScreenSharing(false);
@@ -871,7 +893,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 >
                                     <video 
                                         ref={localVideoRef} 
-                                        className={`w-full h-full object-cover transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                        className={`w-full h-full ${isScreenSharing ? 'object-contain' : 'object-cover'} transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
                                         autoPlay 
                                         playsInline 
                                         muted 
@@ -904,7 +926,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         {isCamOn ? (
                                             <ParticipantVideo 
                                                 stream={peerObj.stream} 
-                                                className="w-full h-full object-cover" 
+                                                className={`w-full h-full ${remoteScreenShares[peerId] ? 'object-contain' : 'object-cover'}`} 
                                             />
                                         ) : (
                                             <div className="absolute inset-0 flex items-center justify-center bg-zoomPanel">
@@ -928,7 +950,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
                                 <video 
                                     ref={localVideoRef} 
-                                    className={`w-full h-full object-cover transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
+                                    className={`w-full h-full ${isScreenSharing ? 'object-contain' : 'object-cover'} transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
                                     autoPlay 
                                     playsInline 
                                     muted 
@@ -952,7 +974,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                     {remoteCameras[activePin as number] !== false ? (
                                         <ParticipantVideo 
                                             stream={remotePeers[activePin as number].stream} 
-                                            className="w-full h-full object-cover" 
+                                            className={`w-full h-full ${remoteScreenShares[activePin as number] ? 'object-contain' : 'object-cover'}`} 
                                         />
                                     ) : (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zoomPanel">

@@ -1120,6 +1120,14 @@ async def handle_camera_state_change(sid, data):
         'enabled': data.get('enabled')
     }, room=room, skip_sid=sid)
 
+@sio.on('screen-share-change')
+async def handle_screen_share_change(sid, data):
+    room = str(data.get('meeting_id'))
+    await sio.emit('screen-share-change', {
+        'user_id': data.get('user_id'),
+        'enabled': data.get('enabled')
+    }, room=room, skip_sid=sid)
+
 @sio.on('attention-score-update')
 async def handle_attention_score_update(sid, data):
     room = str(data.get('meeting_id'))
