@@ -106,6 +106,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [pinnedPeerId, setPinnedPeerId] = useState<string | number>('local');
     const [remoteCameras, setRemoteCameras] = useState<{ [key: number]: boolean }>({});
     const [remoteScreenShares, setRemoteScreenShares] = useState<{ [key: number]: boolean }>({});
+    const [electronScreenSources, setElectronScreenSources] = useState<any[] | null>(null);
 
     // Warning states
     const [showWarning, setShowWarning] = useState<boolean>(false);
@@ -670,6 +671,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     // Toggle Screen Share
     const handleToggleScreenShare = async () => {
         if (!isScreenSharing) {
+            // Check if running inside Electron desktop container
+            if ((window as any).electronAPI) {
+                try {
+                    const sources = await (window as any).electronAPI.getScreenSources();
+                    setElectronScreenSources(sources);
+                } catch (err) {
+                    console.error("Failed to get Electron screen sources:", err);
+                }
+                return;
+            }
+
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 const screenTrack = stream.getVideoTracks()[0];
@@ -702,6 +714,45 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             if (screenStream) {
                 stopScreenShare(screenStream);
             }
+        }
+    };
+
+    const startElectronScreenShare = async (sourceId: string) => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: sourceId
+                    }
+                } as any
+            });
+            const screenTrack = stream.getVideoTracks()[0];
+            
+            if (webrtcHandlerRef.current) {
+                webrtcHandlerRef.current.replaceVideoTrack(screenTrack);
+                if (webrtcHandlerRef.current.socket) {
+                    webrtcHandlerRef.current.socket.emit('screen-share-change', {
+                        meeting_id: meeting.meetingId,
+                        user_id: user.id,
+                        enabled: true
+                    });
+                }
+            }
+            
+            setScreenStream(stream);
+            setIsScreenSharing(true);
+            
+            if (localVideoRef.current) {
+                localVideoRef.current.srcObject = stream;
+            }
+            
+            screenTrack.onended = () => {
+                stopScreenShare(stream);
+            };
+        } catch (err) {
+            console.error("Failed to start Electron screen sharing stream:", err);
         }
     };
 
@@ -1287,6 +1338,46 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     >
                         Back to Lobby
                     </button>
+                </div>
+            )}
+
+            {/* Electron Screen Sharing Source Selection Dialog */}
+            {electronScreenSources && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+                    <div className="bg-[#090A0F] border border-zoomBorder w-full max-w-4xl max-h-[85vh] rounded-2xl flex flex-col shadow-2xl">
+                        <div className="p-5 border-b border-zoomBorder flex justify-between items-center bg-zoomControlBar">
+                            <div>
+                                <h3 className="font-extrabold text-sm text-zoomText uppercase tracking-wider">🖥️ Select Window or Screen</h3>
+                                <p className="text-[10px] text-slate-400 mt-1">Choose the screen or window you want to share with other participants</p>
+                            </div>
+                            <button 
+                                onClick={() => setElectronScreenSources(null)} 
+                                className="text-slate-400 hover:text-white text-xs font-bold px-3 py-1 rounded bg-slate-800"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                        <div className="flex-grow overflow-y-auto p-6 grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {electronScreenSources.map(source => (
+                                <div 
+                                    key={source.id}
+                                    onClick={() => {
+                                        startElectronScreenShare(source.id);
+                                        setElectronScreenSources(null);
+                                    }}
+                                    className="bg-zoomCard border border-zoomBorder hover:border-zoomBlue p-3 rounded-xl flex flex-col gap-2 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg group"
+                                >
+                                    <div className="aspect-video w-full rounded bg-black/40 overflow-hidden relative border border-white/5">
+                                        <img src={source.thumbnail} alt={source.name} className="w-full h-full object-contain" />
+                                        <div className="absolute inset-0 bg-zoomBlue/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                            <span className="bg-zoomBlue text-white text-[10px] font-black uppercase px-3 py-1 rounded shadow-lg">Share Source</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-zoomText truncate group-hover:text-zoomBlue transition-all mt-1">{source.name || "Unnamed Source"}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
