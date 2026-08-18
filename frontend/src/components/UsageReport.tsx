@@ -145,7 +145,14 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
         });
 
         // Listen for real-time focus log updates
-        socket.on('attention-update', (data: any) => {
+        socket.on('attention-score-update', (incomingData: any) => {
+            const data = {
+                user_id: incomingData.user_id,
+                username: incomingData.username,
+                attention_score: incomingData.score,
+                state: incomingData.state || 'Attentive',
+                warnings_count: incomingData.warnings_count || 0
+            };
             setParticipants(prev => {
                 const previousRecord = prev[data.user_id];
                 let lowAttentionStart = previousRecord ? previousRecord.lowAttentionStart : null;

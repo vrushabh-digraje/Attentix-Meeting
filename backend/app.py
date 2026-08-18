@@ -880,13 +880,12 @@ async def log_attention(data: LogAttentionSchema):
         username = user.username if user else "Unknown User"
         
         # Broadcast real-time score updates to SocketIO meeting room
-        await sio.emit('attention-update', {
+        await sio.emit('attention-score-update', {
             'user_id': data.user_id,
             'username': username,
-            'attention_score': data.attention_score,
+            'score': data.attention_score,
             'state': data.state,
-            'warnings_count': data.warnings_count,
-            'timestamp': new_log.timestamp.isoformat()
+            'warnings_count': data.warnings_count
         }, room=str(data.meeting_id))
         
         return {"status": "logged"}
@@ -1134,7 +1133,9 @@ async def handle_attention_score_update(sid, data):
     await sio.emit('attention-score-update', {
         'user_id': data.get('user_id'),
         'username': data.get('username'),
-        'score': data.get('score')
+        'score': data.get('score'),
+        'state': data.get('state'),
+        'warnings_count': data.get('warnings_count')
     }, room=room, skip_sid=sid)
 
 @sio.on('chat-message')

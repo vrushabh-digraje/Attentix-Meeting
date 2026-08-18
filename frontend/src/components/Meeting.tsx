@@ -392,7 +392,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     meeting_id: meeting.meetingId,
                     user_id: user.id,
                     username: user.username,
-                    score: activityScore
+                    score: activityScore,
+                    state: state,
+                    warnings_count: warningCountRef.current
                 });
             }
 
@@ -435,7 +437,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     meeting_id: meeting.meetingId,
                     user_id: user.id,
                     username: user.username,
-                    score: 100
+                    score: 100,
+                    state: 'Attentive',
+                    warnings_count: warningCountRef.current
                 });
             }
         };
@@ -576,7 +580,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     meeting_id: meeting.meetingId,
                     user_id: user.id,
                     username: user.username,
-                    score: Math.round(score)
+                    score: Math.round(score),
+                    state: state,
+                    warnings_count: warningCountRef.current
                 });
             }
         }
@@ -899,7 +905,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 Object.entries(participantScores)
                                     .filter(([pId]) => Number(pId) !== user.id)
                                     .map(([pId, scoreData]) => {
-                                        const scorePct = scoreData.score;
+                                        const isCamOn = remoteCameras[Number(pId)] !== false;
+                                        const scorePct = isCamOn ? scoreData.score : 0;
                                         let progressColor = 'bg-stateGreen';
                                         let textColor = 'text-stateGreen';
                                         if (scorePct < 40) {
