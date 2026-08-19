@@ -272,7 +272,7 @@ const App: React.FC = () => {
         const top = window.screenY + (window.outerHeight - height) / 2;
         
         const activeClientId = googleClientId || localStorage.getItem('attentix_google_client_id') || '';
-        const popupUrl = window.location.origin + "/google-login-page" + 
+        const popupUrl = apiBase + "/google-login-page" + 
             (activeClientId ? `?client_id=${encodeURIComponent(activeClientId)}` : '');
             
         window.open(popupUrl, "Google Sign In", `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`);
