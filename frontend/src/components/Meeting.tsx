@@ -466,6 +466,43 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         };
     }, [isScreenSharing, waitingRoomState, meeting.role]);
 
+    // Tab Visibility Monitor (If student minimizes/leaves tab, instantly mark as Distracted to save CPU & report instantly)
+    useEffect(() => {
+        if (meeting.role === 'host' || waitingRoomState !== 'approved') return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                console.log("Tab hidden. Emitting 0% attention score.");
+                
+                // Immediately emit 0% to the host
+                if (webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+                    webrtcHandlerRef.current.socket.emit('attention-score-update', {
+                        meeting_id: meeting.meetingId,
+                        user_id: user.id,
+                        username: user.username,
+                        score: 0,
+                        state: 'Inactive',
+                        warnings_count: warningCountRef.current
+                    });
+                }
+
+                // Buffer 0% logs in database queue
+                logsBufferRef.current.push({
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    attention_score: 0,
+                    state: 'Inactive',
+                    warnings_count: warningCountRef.current
+                });
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [waitingRoomState, meeting.role, meeting.meetingId, user.id, user.username]);
+
     // Auto-dismiss chat notification toast after 2 seconds
     useEffect(() => {
         if (chatNotification) {

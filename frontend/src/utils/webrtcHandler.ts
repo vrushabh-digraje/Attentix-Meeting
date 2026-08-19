@@ -159,7 +159,21 @@ export class WebRTCHandler {
 
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream!);
+                const sender = pc.addTrack(track, this.localStream!);
+                if (track.kind === 'video') {
+                    // Limit bandwidth usage and CPU decoding costs for all types of processors
+                    try {
+                        const params = sender.getParameters();
+                        if (!params.encodings) {
+                            params.encodings = [{}];
+                        }
+                        params.encodings[0].maxBitrate = 200000; // Limit WebRTC video track to 200 kbps max
+                        params.encodings[0].scaleResolutionDownBy = 1.5; // Scale down video resolution to reduce CPU overhead
+                        sender.setParameters(params);
+                    } catch (err) {
+                        console.warn("Failed to set video track optimization parameters:", err);
+                    }
+                }
             });
         }
 

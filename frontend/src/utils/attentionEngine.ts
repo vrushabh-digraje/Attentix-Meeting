@@ -69,6 +69,9 @@ export class AttentionEngine {
         let lastFrameTime = 0;
         this.camera = new Camera(this.video, {
             onFrame: async () => {
+                if (document.visibilityState === 'hidden') {
+                    return; // Skip calculations if browser window is hidden to save CPU/GPU cycles
+                }
                 const now = Date.now();
                 if (now - lastFrameTime >= 333) {
                     lastFrameTime = now;
