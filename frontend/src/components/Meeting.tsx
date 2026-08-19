@@ -220,9 +220,15 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         playWarningBeep();
                     });
 
-                    handler.socket.on('join-approved', () => {
+                    handler.socket.on('join-approved', (data: any) => {
                         console.log('Join approved by host');
                         setWaitingRoomState('approved');
+                        if (data && data.room_cameras) {
+                            setRemoteCameras(data.room_cameras);
+                        }
+                        if (data && data.room_screen_shares) {
+                            setRemoteScreenShares(data.room_screen_shares);
+                        }
                     });
 
                     handler.socket.on('join-declined', () => {
@@ -502,6 +508,22 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [waitingRoomState, meeting.role, meeting.meetingId, user.id, user.username]);
+
+    // Broadcast current media states immediately upon entering approved state
+    useEffect(() => {
+        if (waitingRoomState === 'approved' && webrtcHandlerRef.current && webrtcHandlerRef.current.socket) {
+            webrtcHandlerRef.current.socket.emit('camera-state-change', {
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                enabled: videoEnabled
+            });
+            webrtcHandlerRef.current.socket.emit('screen-share-change', {
+                meeting_id: meeting.meetingId,
+                user_id: user.id,
+                enabled: isScreenSharing
+            });
+        }
+    }, [waitingRoomState, videoEnabled, isScreenSharing, meeting.meetingId, user.id]);
 
     // Auto-dismiss chat notification toast after 2 seconds
     useEffect(() => {

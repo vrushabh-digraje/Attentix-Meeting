@@ -945,6 +945,8 @@ async def get_analytics(meeting_id: int):
 # Socket.IO Event Handlers (Asynchronous)
 user_sids = {}
 approved_participants = {} # room -> set of user_ids
+room_cameras = {} # room -> {user_id: enabled}
+room_screen_shares = {} # room -> {user_id: enabled}
 
 @sio.on('join-room')
 async def handle_join_room(sid, data):
@@ -979,7 +981,10 @@ async def handle_join_room(sid, data):
         
         if is_already_approved:
             print(f"[SOCKET] Reconnecting approved participant {username} ({user_id}) to room {room}")
-            await sio.emit('join-approved', {}, to=sid)
+            await sio.emit('join-approved', {
+                'room_cameras': room_cameras.get(room, {}),
+                'room_screen_shares': room_screen_shares.get(room, {})
+            }, to=sid)
             await sio.emit('peer-joined', {
                 'user_id': user_id,
                 'username': username,
@@ -1074,7 +1079,10 @@ async def handle_approve_join(sid, data):
             approved_participants[room] = set()
         approved_participants[room].add(target_id)
 
-        await sio.emit('join-approved', {}, to=target_sid)
+        await sio.emit('join-approved', {
+            'room_cameras': room_cameras.get(room, {}),
+            'room_screen_shares': room_screen_shares.get(room, {})
+        }, to=target_sid)
         
         # Look up username to broadcast peer-joined
         session = db_manager.get_session()
@@ -1114,17 +1122,31 @@ async def handle_kick_participant(sid, data):
 @sio.on('camera-state-change')
 async def handle_camera_state_change(sid, data):
     room = str(data.get('meeting_id'))
+    user_id = data.get('user_id')
+    enabled = data.get('enabled')
+    
+    if room not in room_cameras:
+        room_cameras[room] = {}
+    room_cameras[room][user_id] = enabled
+
     await sio.emit('camera-state-change', {
-        'user_id': data.get('user_id'),
-        'enabled': data.get('enabled')
+        'user_id': user_id,
+        'enabled': enabled
     }, room=room, skip_sid=sid)
 
 @sio.on('screen-share-change')
 async def handle_screen_share_change(sid, data):
     room = str(data.get('meeting_id'))
+    user_id = data.get('user_id')
+    enabled = data.get('enabled')
+
+    if room not in room_screen_shares:
+        room_screen_shares[room] = {}
+    room_screen_shares[room][user_id] = enabled
+
     await sio.emit('screen-share-change', {
-        'user_id': data.get('user_id'),
-        'enabled': data.get('enabled')
+        'user_id': user_id,
+        'enabled': enabled
     }, room=room, skip_sid=sid)
 
 @sio.on('attention-score-update')
