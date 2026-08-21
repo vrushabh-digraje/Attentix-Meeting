@@ -16,7 +16,10 @@ export interface MeetingSession {
 }
 
 const App: React.FC = () => {
-    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run';
+    const rawUrl = (import.meta as any).env.VITE_API_URL || '';
+    const rawApiBase = (rawUrl.includes('render.com') || !rawUrl)
+        ? 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run'
+        : rawUrl;
     const apiBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
     
     // Core States

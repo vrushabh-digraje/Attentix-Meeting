@@ -51,7 +51,10 @@ export class WebRTCHandler {
     }
 
     initialize(): void {
-        const rawSocketUrl = (import.meta as any).env.VITE_API_URL || 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run';
+        const rawUrl = (import.meta as any).env.VITE_API_URL || '';
+        const rawSocketUrl = (rawUrl.includes('render.com') || !rawUrl)
+            ? 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run'
+            : rawUrl;
         const socketUrl = rawSocketUrl.endsWith('/') ? rawSocketUrl.slice(0, -1) : rawSocketUrl;
         // Connect to Socket.IO signaling server
         this.socket = io(socketUrl);

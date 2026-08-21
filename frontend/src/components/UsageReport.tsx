@@ -32,7 +32,10 @@ interface DistractionLog {
 }
 
 const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeeting }) => {
-    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run';
+    const rawUrl = (import.meta as any).env.VITE_API_URL || '';
+    const rawApiBase = (rawUrl.includes('render.com') || !rawUrl)
+        ? 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run'
+        : rawUrl;
     const apiBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
 
     const trendCanvasRef = useRef<HTMLCanvasElement>(null);

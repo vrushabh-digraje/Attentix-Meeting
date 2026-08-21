@@ -9,7 +9,10 @@ interface LobbyProps {
 }
 
 const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
-    const rawApiBase = (import.meta as any).env.VITE_API_URL || 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run';
+    const rawUrl = (import.meta as any).env.VITE_API_URL || '';
+    const rawApiBase = (rawUrl.includes('render.com') || !rawUrl)
+        ? 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run'
+        : rawUrl;
     const apiBase = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
 
     const [roomCodeInput, setRoomCodeInput] = useState<string>('');
