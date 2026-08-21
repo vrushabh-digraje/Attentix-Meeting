@@ -1186,7 +1186,7 @@ async def handle_cancel_join_request(sid, data):
 
 @sio.event
 async def disconnect(sid):
-    rooms = sio.get_rooms(sid)
+    rooms = sio.rooms(sid)
     target_user_id = None
     for uid, s in list(user_sids.items()):
         if s == sid:
