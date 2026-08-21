@@ -2,11 +2,15 @@ import os
 import modal
 
 # 1. Define the container image with all python packages installed
-# It reads the requirements.txt from your local backend directory
+# It reads the requirements.txt and copies the backend files to /root/backend
 image = (
     modal.Image.debian_slim()
     .pip_install_from_requirements(
         os.path.join(os.path.dirname(__file__), "requirements.txt")
+    )
+    .add_local_dir(
+        os.path.dirname(__file__), 
+        remote_path="/root/backend"
     )
 )
 
@@ -16,14 +20,6 @@ app = modal.App("attentix-backend")
 # 3. Expose the FastAPI + Socket.IO ASGI app from app.py
 @app.function(
     image=image,
-    mounts=[
-        # Mount your backend code into the Modal container
-        modal.Mount.from_local_dir(
-            os.path.dirname(__file__), 
-            remote_path="/root/backend",
-            condition=lambda p: not any(x in p for x in ["__pycache__", "db", "dist"])
-        )
-    ],
     # Add environment variables (like database credentials)
     secrets=[
         modal.Secret.from_dict({
