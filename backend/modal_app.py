@@ -39,7 +39,8 @@ def initialize_persistent_db():
 # 3. Expose the FastAPI + Socket.IO ASGI app from app.py
 @app.function(
     image=image,
-    volumes={"/data": db_volume}
+    volumes={"/data": db_volume},
+    max_containers=1
 )
 @modal.asgi_app()
 def attentix_app():

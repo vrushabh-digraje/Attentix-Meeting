@@ -1003,11 +1003,18 @@ async def handle_join_room(sid, data):
                 
             if host_id:
                 host_sid = user_sids.get(host_id)
+                # Send private join request to host if available
                 if host_sid:
                     await sio.emit('join-request', {
                         'user_id': user_id,
                         'username': username
                     }, to=host_sid)
+            
+            # Broadcast the join-request to the room as a backup so any host instance in the room receives it instantly
+            await sio.emit('join-request', {
+                'user_id': user_id,
+                'username': username
+            }, room=room)
 
 @sio.on('leave-room')
 async def handle_leave_room(sid, data):
@@ -1071,34 +1078,41 @@ async def handle_ice_candidate(sid, data):
 async def handle_approve_join(sid, data):
     room = str(data.get('meeting_id'))
     target_id = int(data.get('target_id'))
+    
+    print(f"[SOCKET] Host approved join for {target_id}")
+    
+    if room not in approved_participants:
+        approved_participants[room] = set()
+    approved_participants[room].add(target_id)
+
+    approved_payload = {
+        'target_id': target_id,
+        'room_cameras': room_cameras.get(room, {}),
+        'room_screen_shares': room_screen_shares.get(room, {})
+    }
+
+    # Send private approve message if socket is active
     target_sid = user_sids.get(target_id)
     if target_sid:
-        print(f"[SOCKET] Host approved join for {target_id}")
+        await sio.emit('join-approved', approved_payload, to=target_sid)
         
-        if room not in approved_participants:
-            approved_participants[room] = set()
-        approved_participants[room].add(target_id)
-
-        await sio.emit('join-approved', {
-            'room_cameras': room_cameras.get(room, {}),
-            'room_screen_shares': room_screen_shares.get(room, {})
-        }, to=target_sid)
+    # Broadcast to room as a backup so reconnects/latency issues get approved instantly
+    await sio.emit('join-approved-broadcast', approved_payload, room=room)
+    # Look up username to broadcast peer-joined
+    session = db_manager.get_session()
+    username = "Unknown Student"
+    try:
+        user = session.query(User).filter(User.id == target_id).first()
+        if user:
+            username = user.username
+    finally:
+        session.close()
         
-        # Look up username to broadcast peer-joined
-        session = db_manager.get_session()
-        username = "Unknown Student"
-        try:
-            user = session.query(User).filter(User.id == target_id).first()
-            if user:
-                username = user.username
-        finally:
-            session.close()
-            
-        await sio.emit('peer-joined', {
-            'user_id': target_id,
-            'username': username,
-            'socket_id': target_sid
-        }, room=room, skip_sid=target_sid)
+    await sio.emit('peer-joined', {
+        'user_id': target_id,
+        'username': username,
+        'socket_id': target_sid
+    }, room=room, skip_sid=target_sid)
 
 @sio.on('decline-join')
 async def handle_decline_join(sid, data):

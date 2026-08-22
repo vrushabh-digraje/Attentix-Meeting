@@ -223,7 +223,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         playWarningBeep();
                     });
 
-                    handler.socket.on('join-approved', (data: any) => {
+                    const handleApproveAction = (data: any) => {
                         console.log('Join approved by host');
                         setWaitingRoomState('approved');
                         if (data && data.room_cameras) {
@@ -231,6 +231,15 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         }
                         if (data && data.room_screen_shares) {
                             setRemoteScreenShares(data.room_screen_shares);
+                        }
+                    };
+
+                    handler.socket.on('join-approved', handleApproveAction);
+
+                    handler.socket.on('join-approved-broadcast', (data: any) => {
+                        if (data && data.target_id === user.id) {
+                            console.log('Join approved via room broadcast');
+                            handleApproveAction(data);
                         }
                     });
 
