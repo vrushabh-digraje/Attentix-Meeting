@@ -71,4 +71,37 @@ def list_users():
     users = session.query(User).all()
     print("USERS IN DATABASE:")
     for u in users:
-        print(f"- {u.username} ({u.email})")
+        print(f"- {u.username} ({u.email}): {u.password_hash}")
+
+@app.function(
+    image=image,
+    volumes={"/data": db_volume}
+)
+def reset_passwords():
+    import sys
+    sys.path.append("/root/backend")
+    from database import DatabaseManager, User
+    from app import hash_password
+    
+    # Configure and point database connection to the persistent volume
+    initialize_persistent_db()
+    
+    db = DatabaseManager(os.environ.get("DATABASE_URL"))
+    session = db.get_session()
+    
+    users_to_reset = ["Xyz", "vrushabhdigraje"]
+    new_password = "password123"
+    
+    print("RESETTING PASSWORDS...")
+    for username in users_to_reset:
+        user = session.query(User).filter(User.username == username).first()
+        if user:
+            user.password_hash = hash_password(new_password)
+            print(f"Reset password for {username} to '{new_password}'")
+        else:
+            print(f"User {username} not found")
+            
+    session.commit()
+    # Force commit changes to the Modal Volume
+    db_volume.commit()
+    print("PASSWORDS COMMITTED!")
