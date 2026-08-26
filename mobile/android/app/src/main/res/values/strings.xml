@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FocusGuard</string>
+    <string name="title_activity_main">FocusGuard</string>
+    <string name="package_name">com.focusguard.app</string>
+    <string name="custom_url_scheme">com.focusguard.app</string>
+</resources>

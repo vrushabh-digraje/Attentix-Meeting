@@ -1,7 +1,7 @@
 {
   "appId": "com.focusguard.app",
   "appName": "FocusGuard",
-  "webDir": "../frontend",
+  "webDir": "../backend/dist",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
