@@ -488,30 +488,31 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
         <div className="bg-zoomDarkBg text-zoomText min-h-screen flex flex-col font-sans">
             
             {/* Navigation header */}
-            <nav className="flex justify-between items-center px-8 py-4 border-b border-zoomBorder bg-zoomControlBar backdrop-blur-md sticky top-0 z-50">
-                <div className="text-xl font-black text-zoomBlue flex items-center">
-                    Attentix<span className="text-xs text-zoomTextSec font-normal ml-3">Usage & Attention Reports</span>
+            <nav className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center px-4 sm:px-8 py-4 border-b border-zoomBorder bg-zoomControlBar backdrop-blur-md sticky top-0 z-50">
+                <div className="text-xl font-black text-zoomBlue flex flex-col sm:flex-row items-center gap-1 sm:gap-3 text-center sm:text-left">
+                    <span>Attentix</span>
+                    <span className="text-xs text-zoomTextSec font-normal">Usage & Attention Reports</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
                     <button 
                         onClick={handleDownloadHTML}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white font-semibold rounded-lg text-xs transition-all shadow-md"
+                        className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomBlue hover:bg-zoomBlueHover text-white font-semibold rounded-lg text-[10px] sm:text-xs transition-all shadow-md"
                     >
                         📥 Download PDF/HTML Report
                     </button>
                     <button 
                         onClick={handleDownloadCSV}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-xs transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
                     >
                         📄 Download CSV
                     </button>
                     <button 
                         onClick={onReturnToMeeting}
-                        className="flex items-center gap-1 px-4 py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-xs transition-all"
+                        className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
                     >
                         <ArrowLeft size={12} /> Return to Room
                     </button>
-                    <span className="bg-zoomControlBar border border-zoomBorder px-4 py-1.5 rounded-full text-xs text-zoomTextSec font-medium">
+                    <span className="bg-zoomControlBar border border-zoomBorder px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-[10px] sm:text-xs text-zoomTextSec font-medium">
                         Host
                     </span>
                 </div>
