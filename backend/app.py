@@ -122,6 +122,10 @@ class ScheduleMeetingSchema(BaseModel):
 def generate_meeting_number():
     return ''.join(random.choices(string.digits, k=9))
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "timestamp": time.time()}
+
 # Authentication Routes
 @app.post("/api/auth/register")
 async def register(data: RegisterSchema):

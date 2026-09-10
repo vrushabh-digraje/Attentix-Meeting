@@ -54,6 +54,7 @@ def initialize_persistent_db():
     image=image,
     volumes={"/data": db_volume},
     max_containers=1,
+    scaledown_window=300,
     secrets=[
         modal.Secret.from_dict({
             "GOOGLE_CLIENT_ID": os.environ.get("GOOGLE_CLIENT_ID", ""),

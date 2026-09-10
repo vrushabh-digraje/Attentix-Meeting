@@ -42,11 +42,16 @@ const App: React.FC = () => {
     const [useCustomGoogle, setUseCustomGoogle] = useState<boolean>(false);
     const [googleClientId, setGoogleClientId] = useState<string>(localStorage.getItem('attentix_google_client_id') || '');
     const [tempClientId, setTempClientId] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submittingNotice, setSubmittingNotice] = useState<string>('');
 
     // Check query params and session storage on mount
     useEffect(() => {
         const storedUser = sessionStorage.getItem('attentix_user');
         
+        // Immediate server background pre-warming
+        fetch(`${apiBase}/api/health`).catch(() => {});
+
         const fetchGoogleConfig = async () => {
             try {
                 const res = await fetch(`${apiBase}/api/auth/google/config`);
@@ -206,43 +211,87 @@ const App: React.FC = () => {
 
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setErrorMsg('');
         setSuccessMsg('');
+        setIsSubmitting(true);
+        setSubmittingNotice('');
+
+        const timer = setTimeout(() => {
+            setSubmittingNotice('Connecting to cloud server, please wait a moment...');
+        }, 1800);
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000);
+
             const res = await fetch(`${apiBase}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username: username.trim(), password }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Invalid username or password');
 
             sessionStorage.setItem('attentix_user', JSON.stringify(data.user));
             showLobby(data.user);
         } catch (err: any) {
-            setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/login)`);
+            if (err.name === 'AbortError') {
+                setErrorMsg('Connection timed out. The cloud server took too long to wake up. Please try again.');
+            } else {
+                setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/login)`);
+            }
+        } finally {
+            clearTimeout(timer);
+            setIsSubmitting(false);
+            setSubmittingNotice('');
         }
     };
 
     const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setErrorMsg('');
         setSuccessMsg('');
+        setIsSubmitting(true);
+        setSubmittingNotice('');
+
+        const timer = setTimeout(() => {
+            setSubmittingNotice('Saving account to secure cloud database...');
+        }, 1800);
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 35000);
+
             const res = await fetch(`${apiBase}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
+                body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to register');
 
             setIsRegister(false);
             setUsername('');
             setPassword('');
-            setSuccessMsg('Registration successful! Please sign in.');
+            setSuccessMsg('Registration successful! Please sign in with your credentials.');
         } catch (err: any) {
-            setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/register)`);
+            if (err.name === 'AbortError') {
+                setErrorMsg('Connection timed out. The cloud server took too long to wake up. Please try again.');
+            } else {
+                setErrorMsg(`${err.message} (Endpoint: ${apiBase}/api/auth/register)`);
+            }
+        } finally {
+            clearTimeout(timer);
+            setIsSubmitting(false);
+            setSubmittingNotice('');
         }
     };
 
@@ -342,7 +391,26 @@ const App: React.FC = () => {
                                 <label className="block text-[10px] font-semibold text-zoomTextSec uppercase tracking-wider mb-1.5">Password</label>
                                 <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" className="w-full px-3 py-2.5 rounded-lg bg-zoomCard border border-white/10 text-white outline-none focus:border-zoomBlue transition-all text-xs" />
                             </div>
-                            <button type="submit" className="w-full py-2.5 mt-2 rounded-lg btn-premium-blue text-white font-bold text-xs transition-all shadow-lg">Sign In</button>
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting}
+                                className={`w-full py-2.5 mt-2 rounded-lg btn-premium-blue text-white font-bold text-xs transition-all shadow-lg flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.01]'}`}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Signing In...</span>
+                                    </>
+                                ) : "Sign In"}
+                            </button>
+                            {submittingNotice && (
+                                <div className="text-[11px] text-zoomBlue flex items-center justify-center gap-1.5 animate-pulse mt-2 font-medium text-center bg-zoomBlue/10 p-2 rounded-lg border border-zoomBlue/20">
+                                    <span>⚡</span> {submittingNotice}
+                                </div>
+                            )}
                             
                             <div className="relative my-4 flex items-center justify-center">
                                 <div className="border-t border-white/10 w-full"></div>
@@ -381,7 +449,26 @@ const App: React.FC = () => {
                                 <label className="block text-[10px] font-semibold text-zoomTextSec uppercase tracking-wider mb-1.5">Password</label>
                                 <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Choose password" className="w-full px-3 py-2.5 rounded-lg bg-zoomCard border border-white/10 text-white outline-none focus:border-zoomBlue transition-all text-xs" />
                             </div>
-                            <button type="submit" className="w-full py-2.5 mt-2 rounded-lg btn-premium-blue text-white font-bold text-xs transition-all shadow-lg">Create Account</button>
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting}
+                                className={`w-full py-2.5 mt-2 rounded-lg btn-premium-blue text-white font-bold text-xs transition-all shadow-lg flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-75 cursor-not-allowed' : 'hover:scale-[1.01]'}`}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Creating Account...</span>
+                                    </>
+                                ) : "Create Account"}
+                            </button>
+                            {submittingNotice && (
+                                <div className="text-[11px] text-zoomBlue flex items-center justify-center gap-1.5 animate-pulse mt-2 font-medium text-center bg-zoomBlue/10 p-2 rounded-lg border border-zoomBlue/20">
+                                    <span>⚡</span> {submittingNotice}
+                                </div>
+                            )}
                             
                             <div className="relative my-4 flex items-center justify-center">
                                 <div className="border-t border-white/10 w-full"></div>
