@@ -20,6 +20,20 @@ import time
 
 # Ensure backend folder is in path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Auto-load .env configuration if present
+_env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if os.path.exists(_env_file):
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                _k = _k.strip()
+                _v = _v.strip().strip("'\"")
+                if _k and _v and _k not in os.environ:
+                    os.environ[_k] = _v
+
 from database import DatabaseManager, User, Meeting, Participant, AttentionLog, ScheduledMeeting
 
 # Secure Password Hashing helpers using native hashlib (PBKDF2 SHA256)
@@ -186,8 +200,11 @@ def verify_google_token(id_token: str, client_id: Optional[str] = None) -> dict:
 
 @app.get("/api/auth/google/config")
 async def get_google_config():
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
     return {
-        "client_id": os.environ.get('GOOGLE_CLIENT_ID', '')
+        "client_id": client_id,
+        "mode": "production" if client_id else "simulation",
+        "message": "Google Identity Services Active" if client_id else "Mock/Simulation Accounts Active"
     }
 
 @app.post("/api/auth/google-login")
@@ -1214,19 +1231,6 @@ async def disconnect(sid):
             if room != sid:
                 await sio.emit('cancel-join-request', {'user_id': target_user_id}, room=room)
 
-# Serve React static assets
-dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
-if os.path.exists(dist_path):
-    app.mount("/", StaticFiles(directory=dist_path, html=True), name="static")
-
-# Catch-all handler for React Routing (SPA fallback)
-@app.exception_handler(status.HTTP_404_NOT_FOUND)
-async def not_found_exception_handler(request: Request, exc: HTTPException):
-    index_file = os.path.join(dist_path, "index.html")
-    if os.path.exists(index_file):
-        return FileResponse(index_file)
-    return {"error": "Not Found"}
-
 # --- EMAIL NOTIFICATION SYSTEM ---
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
@@ -1258,6 +1262,41 @@ def send_email_notification(to_email: str, subject: str, html_body: str):
     except Exception as e:
         print(f"[MAIL SENDER ERROR] SMTP transmission failed: {e}")
         return False
+
+class TestEmailSchema(BaseModel):
+    to_email: str
+
+@app.get("/api/admin/test-email")
+@app.post("/api/admin/test-email")
+async def test_email_api(to_email: Optional[str] = None, data: Optional[TestEmailSchema] = None):
+    recipient = (data.to_email if data else None) or to_email or SMTP_USER
+    if not recipient:
+        raise HTTPException(status_code=400, detail="Recipient email required. Pass ?to_email=your@email.com or JSON body {'to_email': '...'}")
+        
+    subject = "Attentix Verification: SMTP Email Alerts Operational"
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #0b0b0c; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #161618; border: 1px solid #2f2f33; padding: 30px; border-radius: 12px;">
+                <h2 style="color: #2D8CFF; margin-bottom: 20px; font-weight: 900;">Attentix Email Notification Test</h2>
+                <p style="font-size: 14px; color: #d0d0d8;">Hello,</p>
+                <p style="font-size: 14px; color: #d0d0d8;">This confirmation email verifies that your <strong>Attentix Automated SMTP Alert System</strong> is operational and delivering messages.</p>
+                <div style="background-color: #242428; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #34A853;">
+                    <p style="margin: 0; font-size: 13px; color: #34A853; font-weight: bold;">Status: SMTP Connected & Verified</p>
+                    <p style="margin: 6px 0 0 0; font-size: 12px; color: #aaaaaa;">Sender: {SMTP_USER or 'Simulation Mode'}</p>
+                </div>
+                <p style="font-size: 12px; color: #82828c;">Automated meeting invitations and 10-minute reminders will now be sent to participants from this mailbox.</p>
+            </div>
+        </body>
+    </html>
+    """
+    success = send_email_notification(recipient, subject, html_body)
+    return {
+        "success": success,
+        "recipient": recipient,
+        "smtp_user": SMTP_USER if SMTP_USER else "Not Configured (Simulation Mode)",
+        "message": "Real email dispatched successfully!" if (SMTP_USER and success) else "Simulation logged (SMTP credentials not configured)."
+    }
 
 def scheduled_meeting_reminder_worker():
     print("[REMINDER WORKER] Background checking thread started.")
@@ -1313,3 +1352,17 @@ def scheduled_meeting_reminder_worker():
 # Start background email worker thread
 worker_thread = threading.Thread(target=scheduled_meeting_reminder_worker, daemon=True)
 worker_thread.start()
+
+# Serve React static assets (must be mounted last after all API endpoints)
+dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dist')
+if os.path.exists(dist_path):
+    app.mount("/", StaticFiles(directory=dist_path, html=True), name="static")
+
+# Catch-all handler for React Routing (SPA fallback)
+@app.exception_handler(status.HTTP_404_NOT_FOUND)
+async def not_found_exception_handler(request: Request, exc: HTTPException):
+    index_file = os.path.join(dist_path, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {"error": "Not Found"}
+
