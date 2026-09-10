@@ -66,6 +66,7 @@ def initialize_persistent_db():
         })
     ]
 )
+@modal.concurrent(max_inputs=100)
 @modal.asgi_app()
 def attentix_app():
     import sys
