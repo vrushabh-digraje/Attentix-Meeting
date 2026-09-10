@@ -27,6 +27,12 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
     const [scheduleTime, setScheduleTime] = useState<string>('');
     const [scheduleDuration, setScheduleDuration] = useState<number>(40);
 
+    // Request progress states to prevent freezes and multi-clicks
+    const [isCreatingMeeting, setIsCreatingMeeting] = useState<boolean>(false);
+    const [isJoiningMeeting, setIsJoiningMeeting] = useState<boolean>(false);
+    const [isSchedulingMeeting, setIsSchedulingMeeting] = useState<boolean>(false);
+    const [isStartingDueMeeting, setIsStartingDueMeeting] = useState<boolean>(false);
+
     const loadScheduledMeetings = async () => {
         try {
             const res = await fetch(`${apiBase}/api/meetings/scheduled/${user.id}`);
@@ -83,12 +89,18 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
     }, [scheduledMeetings, dueMeeting]);
 
     const handleCreateMeeting = async () => {
+        if (isCreatingMeeting) return;
+        setIsCreatingMeeting(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         try {
             const res = await fetch(`${apiBase}/api/meetings/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ host_id: user.id })
+                body: JSON.stringify({ host_id: user.id }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to create meeting');
 
@@ -98,23 +110,36 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                 role: 'host'
             });
         } catch (err: any) {
-            alert('Meeting Creation Failed: ' + err.message);
+            if (err.name === 'AbortError') {
+                alert('Meeting Creation timed out. Please verify your connection.');
+            } else {
+                alert('Meeting Creation Failed: ' + err.message);
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            setIsCreatingMeeting(false);
         }
     };
 
     const handleJoinMeeting = async () => {
+        if (isJoiningMeeting) return;
         const cleanedCode = roomCodeInput.trim();
         if (cleanedCode.length !== 9 || isNaN(Number(cleanedCode))) {
             alert('Please enter a valid 9-digit Room Code');
             return;
         }
 
+        setIsJoiningMeeting(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         try {
             const res = await fetch(`${apiBase}/api/meetings/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ meeting_number: cleanedCode, user_id: user.id })
+                body: JSON.stringify({ meeting_number: cleanedCode, user_id: user.id }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to join meeting. Confirm code is active.');
 
@@ -124,18 +149,30 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                 role: 'participant'
             });
         } catch (err: any) {
-            alert('Cannot Join Meeting: ' + err.message);
+            if (err.name === 'AbortError') {
+                alert('Join Request timed out. Please check your internet connection.');
+            } else {
+                alert('Cannot Join Meeting: ' + err.message);
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            setIsJoiningMeeting(false);
         }
     };
 
     const handleScheduleMeeting = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSchedulingMeeting) return;
         const localDate = new Date(`${scheduleDate}T${scheduleTime}`);
         if (isNaN(localDate.getTime())) {
             alert('Please select a valid date and time.');
             return;
         }
         const combinedDateTime = localDate.toISOString();
+
+        setIsSchedulingMeeting(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         try {
             const res = await fetch(`${apiBase}/api/meetings/schedule`, {
                 method: 'POST',
@@ -145,8 +182,10 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                     topic: scheduleTopic,
                     scheduled_time: combinedDateTime,
                     duration: Number(scheduleDuration)
-                })
+                }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Failed to schedule meeting');
 
@@ -157,7 +196,14 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
             setScheduleTime('');
             loadScheduledMeetings();
         } catch (err: any) {
-            alert('Cannot Schedule Meeting: ' + err.message);
+            if (err.name === 'AbortError') {
+                alert('Scheduling request timed out. Please check your connection.');
+            } else {
+                alert('Cannot Schedule Meeting: ' + err.message);
+            }
+        } finally {
+            clearTimeout(timeoutId);
+            setIsSchedulingMeeting(false);
         }
     };
 
@@ -196,10 +242,23 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                             <div className="grid grid-cols-2 gap-4">
                                 <button 
                                     onClick={handleCreateMeeting}
-                                    className="flex flex-col items-center justify-center p-6 btn-premium-orange rounded-xl transition-all shadow-lg group premium-glow-orange"
+                                    disabled={isCreatingMeeting}
+                                    className={`flex flex-col items-center justify-center p-6 btn-premium-orange rounded-xl transition-all shadow-lg group premium-glow-orange ${isCreatingMeeting ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    <Video size={36} className="text-white mb-3 group-hover:scale-105 transition-all duration-300" />
-                                    <span className="text-xs font-bold text-white">New Meeting</span>
+                                    {isCreatingMeeting ? (
+                                        <>
+                                            <svg className="animate-spin h-8 w-8 text-white mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span className="text-xs font-bold text-white">Starting Room...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Video size={36} className="text-white mb-3 group-hover:scale-105 transition-all duration-300" />
+                                            <span className="text-xs font-bold text-white">New Meeting</span>
+                                        </>
+                                    )}
                                 </button>
 
                                 <button 
@@ -222,9 +281,18 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                                 />
                                 <button 
                                     onClick={handleJoinMeeting}
-                                    className="w-full py-2.5 btn-premium-blue text-black text-xs font-extrabold rounded-lg transition-all shadow-lg"
+                                    disabled={isJoiningMeeting}
+                                    className={`w-full py-2.5 btn-premium-blue text-black text-xs font-extrabold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 ${isJoiningMeeting ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    Join Meeting
+                                    {isJoiningMeeting ? (
+                                        <>
+                                            <svg className="animate-spin h-3.5 w-3.5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Connecting to Room...</span>
+                                        </>
+                                    ) : "Join Meeting"}
                                 </button>
                             </div>
                         </div>
@@ -302,13 +370,20 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                             Later
                         </button>
                         <button 
+                            disabled={isStartingDueMeeting}
                             onClick={async () => {
+                                if (isStartingDueMeeting) return;
+                                setIsStartingDueMeeting(true);
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), 25000);
                                 try {
                                     const res = await fetch(`${apiBase}/api/meetings/join`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ meeting_number: dueMeeting.meeting_number, user_id: user.id })
+                                        body: JSON.stringify({ meeting_number: dueMeeting.meeting_number, user_id: user.id }),
+                                        signal: controller.signal
                                     });
+                                    clearTimeout(timeoutId);
                                     const data = await res.json();
                                     if (!res.ok) throw new Error(data.detail || 'Failed to start scheduled meeting');
 
@@ -319,12 +394,19 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                                     });
                                     setDueMeeting(null);
                                 } catch (err: any) {
-                                    alert('Cannot start scheduled meeting: ' + err.message);
+                                    if (err.name === 'AbortError') {
+                                        alert('Request timed out. Please check your connection.');
+                                    } else {
+                                        alert('Cannot start scheduled meeting: ' + err.message);
+                                    }
+                                } finally {
+                                    clearTimeout(timeoutId);
+                                    setIsStartingDueMeeting(false);
                                 }
                             }}
-                            className="flex-1 py-1.5 bg-zoomOrange hover:bg-zoomOrangeHover text-white text-[10px] font-bold rounded-lg transition-all"
+                            className={`flex-1 py-1.5 bg-zoomOrange hover:bg-zoomOrangeHover text-white text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${isStartingDueMeeting ? 'opacity-75 cursor-not-allowed' : ''}`}
                         >
-                            Start Now
+                            {isStartingDueMeeting ? "Starting..." : "Start Now"}
                         </button>
                     </div>
                 </div>
@@ -366,7 +448,21 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                             
                             <div className="flex gap-2 pt-2">
                                 <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 py-2 rounded-lg bg-zoomBorder hover:bg-slate-800 text-zoomText text-xs font-bold transition-all">Cancel</button>
-                                <button type="submit" className="flex-1 py-2 rounded-lg bg-zoomBlue hover:bg-zoomBlueHover text-black text-xs font-extrabold transition-all">Schedule</button>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSchedulingMeeting}
+                                    className={`flex-1 py-2 rounded-lg bg-zoomBlue hover:bg-zoomBlueHover text-black text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 ${isSchedulingMeeting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                                >
+                                    {isSchedulingMeeting ? (
+                                        <>
+                                            <svg className="animate-spin h-3.5 w-3.5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Scheduling...</span>
+                                        </>
+                                    ) : "Schedule"}
+                                </button>
                             </div>
                         </form>
                     </div>

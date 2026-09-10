@@ -89,12 +89,16 @@ const App: React.FC = () => {
         const pendingRoom = sessionStorage.getItem('attentix_pending_room');
         if (pendingRoom) {
             sessionStorage.removeItem('attentix_pending_room');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
             try {
                 const res = await fetch(`${apiBase}/api/meetings/join`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ meeting_number: pendingRoom, user_id: userSession.id })
+                    body: JSON.stringify({ meeting_number: pendingRoom, user_id: userSession.id }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || 'Failed to auto-join room');
 
@@ -105,7 +109,8 @@ const App: React.FC = () => {
                 });
                 setView('meeting');
             } catch (err: any) {
-                alert('Pending Invite Join Failed: ' + err.message);
+                clearTimeout(timeoutId);
+                alert('Pending Invite Join Failed: ' + (err.name === 'AbortError' ? 'Connection timed out' : err.message));
             }
         }
     };
@@ -113,6 +118,10 @@ const App: React.FC = () => {
     // Bind real Google credential callback to window context for GSI SDK and listen for popup messages
     useEffect(() => {
         (window as any).handleCredentialResponse = async (response: any) => {
+            setIsSubmitting(true);
+            setSubmittingNotice('Authenticating with Google Account...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
             try {
                 const idToken = response.credential;
                 const payloadBase64 = idToken.split('.')[1];
@@ -124,8 +133,10 @@ const App: React.FC = () => {
                 const res = await fetch(`${apiBase}/api/auth/google-login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, username: name, credential: idToken })
+                    body: JSON.stringify({ email: email, username: name, credential: idToken }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || 'Google sign-in failed');
 
@@ -133,25 +144,39 @@ const App: React.FC = () => {
                 sessionStorage.setItem('attentix_user', JSON.stringify(data.user));
                 showLobby(data.user);
             } catch (err: any) {
-                setErrorMsg(err.message);
+                clearTimeout(timeoutId);
+                setErrorMsg(err.name === 'AbortError' ? 'Google authentication timed out. Please try again.' : err.message);
                 setShowGoogleModal(false);
+            } finally {
+                setIsSubmitting(false);
+                setSubmittingNotice('');
             }
         };
 
         const handleAuthSuccess = async (name: string, email: string, credential?: string) => {
+            setIsSubmitting(true);
+            setSubmittingNotice('Signing in to Attentix...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 25000);
             try {
                 const res = await fetch(`${apiBase}/api/auth/google-login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, username: name, credential })
+                    body: JSON.stringify({ email, username: name, credential }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || 'Google authentication failed');
 
                 sessionStorage.setItem('attentix_user', JSON.stringify(data.user));
                 showLobby(data.user);
             } catch (err: any) {
-                setErrorMsg(err.message);
+                clearTimeout(timeoutId);
+                setErrorMsg(err.name === 'AbortError' ? 'Authentication timed out. Please try again.' : err.message);
+            } finally {
+                setIsSubmitting(false);
+                setSubmittingNotice('');
             }
         };
 

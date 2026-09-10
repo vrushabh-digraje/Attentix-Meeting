@@ -56,8 +56,14 @@ export class WebRTCHandler {
             ? 'https://vrushabh-digraje--attentix-backend-attentix-app.modal.run'
             : rawUrl;
         const socketUrl = rawSocketUrl.endsWith('/') ? rawSocketUrl.slice(0, -1) : rawSocketUrl;
-        // Connect to Socket.IO signaling server
-        this.socket = io(socketUrl);
+        // Connect to Socket.IO signaling server with direct WebSocket transport
+        this.socket = io(socketUrl, {
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000
+        });
 
         this.socket.on('connect', () => {
             console.log('Signaling server connected. Joining room:', this.meetingId);
