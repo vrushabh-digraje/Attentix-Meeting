@@ -162,14 +162,41 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
 
         const startMeetingMedia = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480 },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
+                let stream: MediaStream;
+                try {
+                    // Tier 1: Mobile-friendly front camera with ideal dimensions
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+                } catch (e1) {
+                    console.warn("Tier 1 constraints failed, falling back to generic constraints:", e1);
+                    try {
+                        // Tier 2: Basic video + audio
+                        stream = await navigator.mediaDevices.getUserMedia({
+                            video: true,
+                            audio: true
+                        });
+                    } catch (e2) {
+                        console.warn("Tier 2 video+audio failed, falling back to video only:", e2);
+                        try {
+                            // Tier 3: Video only
+                            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        } catch (e3) {
+                            console.warn("Tier 3 video only failed, falling back to audio only:", e3);
+                            // Tier 4: Audio only
+                            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        }
                     }
-                });
+                }
                 activeStream = stream;
                 setLocalStream(stream);
 
@@ -301,7 +328,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 }
 
             } catch (err: any) {
-                alert("Camera and microphone access are required: " + err.message);
+                console.error("Critical media access error:", err);
+                alert("Camera and Microphone access are required to participate in the meeting.\n\nPlease check that your device settings allow Camera and Audio permissions for Attentix, and that no other application is using the camera.");
                 onLeave();
             }
         };

@@ -123,9 +123,9 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
 
     const handleJoinMeeting = async () => {
         if (isJoiningMeeting) return;
-        const cleanedCode = roomCodeInput.trim();
-        if (cleanedCode.length !== 9 || isNaN(Number(cleanedCode))) {
-            alert('Please enter a valid 9-digit Room Code');
+        const cleanedCode = roomCodeInput.replace(/\D/g, '');
+        if (cleanedCode.length !== 9) {
+            alert('Please enter a valid 9-digit Room Code (e.g. 123456789)');
             return;
         }
 
@@ -141,7 +141,12 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
             });
             clearTimeout(timeoutId);
             const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Failed to join meeting. Confirm code is active.');
+            if (!res.ok) {
+                if (res.status === 404) {
+                    throw new Error('This meeting is not active. Either the host has not started it yet or the 9-digit code is incorrect.');
+                }
+                throw new Error(data.detail || 'Failed to join meeting. Confirm code is active.');
+            }
 
             onEnterMeeting({
                 roomCode: data.meeting_number,
@@ -273,6 +278,8 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                             <div className="mt-6 flex flex-col gap-2">
                                 <input 
                                     type="text" 
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
                                     value={roomCodeInput}
                                     onChange={e => setRoomCodeInput(e.target.value)}
                                     placeholder="Enter 9-Digit Meeting ID" 
