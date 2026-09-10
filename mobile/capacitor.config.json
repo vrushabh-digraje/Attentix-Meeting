@@ -4,6 +4,8 @@
   "webDir": "../backend/dist",
   "bundledWebRuntime": false,
   "server": {
+    "url": "https://attentix-app.vercel.app",
+    "cleartext": true,
     "androidScheme": "https",
     "allowNavigation": [
       "*"
