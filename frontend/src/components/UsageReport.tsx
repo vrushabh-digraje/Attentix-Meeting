@@ -775,23 +775,20 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                     <thead>
                                         <tr className="border-b border-zoomBorder text-[10px] font-bold text-zoomTextSec uppercase tracking-wider bg-zoomControlBar/30">
                                             <th className="py-3 px-4">Student</th>
-                                            <th className="py-3 px-4">Current State</th>
-                                            <th className="py-3 px-4">Avg Score</th>
-                                            <th className="py-3 px-4">Latest Score</th>
-                                            <th className="py-3 px-4">Warnings Received</th>
-                                            <th className="py-3 px-4">Last Active</th>
+                                            <th className="py-3 px-4">Average Attention Score</th>
+                                            <th className="py-3 px-4">Number of Warnings</th>
                                             <th className="py-3 px-4 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zoomBorder text-xs">
                                         {activeList.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="py-10 text-center text-zoomTextSec text-[11px]">
+                                                <td colSpan={4} className="py-10 text-center text-zoomTextSec text-[11px]">
                                                     <div className="flex flex-col items-center justify-center">
                                                         <span className="text-2xl mb-2">👨‍🎓</span>
                                                         <span className="font-semibold text-zoomText">No students connected yet.</span>
                                                         <span className="text-[10px] text-zoomTextSec/80 mt-1 max-w-sm">
-                                                            When students join the meeting, all student names, their real-time average attention scores, and warning logs will automatically appear here.
+                                                            When students join the meeting, all student names, their real-time average attention scores, and warning counts will automatically appear here.
                                                         </span>
                                                     </div>
                                                 </td>
@@ -800,31 +797,21 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                             activeList.map((p) => {
                                                 const averageScore = p.avgScore !== undefined ? p.avgScore : p.score;
 
-                                                let badgeColor = 'bg-stateGreen/10 text-stateGreen border-stateGreen/30';
-                                                let badgeDot = 'bg-stateGreen';
-                                                if (p.state === 'Distracted') {
-                                                    badgeColor = 'bg-stateYellow/10 text-stateYellow border-stateYellow/30';
-                                                    badgeDot = 'bg-stateYellow';
-                                                } else if (p.state === 'Inactive') {
-                                                    badgeColor = 'bg-stateRed/10 text-stateRed border-stateRed/30';
-                                                    badgeDot = 'bg-stateRed';
-                                                }
-
                                                 let avgScoreColor = 'text-stateGreen';
                                                 if (averageScore < 50) avgScoreColor = 'text-stateRed';
                                                 else if (averageScore < 75) avgScoreColor = 'text-stateYellow';
 
                                                 let warnBadge = 'bg-zoomControlBar text-zoomTextSec border-zoomBorder';
-                                                let warnLabel = '0 / 3 (Good)';
+                                                let warnLabel = '0 / 3 Warnings (Good)';
                                                 if (p.warnings === 1) {
                                                     warnBadge = 'bg-stateYellow/15 text-stateYellow border-stateYellow/30 font-bold';
-                                                    warnLabel = '1 / 3 (Notice)';
+                                                    warnLabel = '1 / 3 Warnings (Notice)';
                                                 } else if (p.warnings === 2) {
                                                     warnBadge = 'bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold';
-                                                    warnLabel = '2 / 3 (Warning)';
+                                                    warnLabel = '2 / 3 Warnings (Alert)';
                                                 } else if (p.warnings >= 3) {
                                                     warnBadge = 'bg-stateRed/25 text-stateRed border-stateRed/50 font-black animate-pulse';
-                                                    warnLabel = '3 / 3 (Limit Reached)';
+                                                    warnLabel = '3 / 3 Warnings (Limit Reached)';
                                                 }
 
                                                 return (
@@ -840,16 +827,10 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 px-4">
-                                                            <span className={`inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-full text-[10px] font-semibold ${badgeColor}`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${badgeDot}`}></span>
-                                                                {p.state}
-                                                            </span>
-                                                        </td>
                                                         <td className="py-3 px-4 font-black">
                                                             <div className="flex items-center gap-2.5">
                                                                 <span className={`text-sm ${avgScoreColor}`}>{averageScore}%</span>
-                                                                <div className="w-16 h-1.5 bg-zoomControlBar rounded-full overflow-hidden hidden sm:block">
+                                                                <div className="w-24 h-1.5 bg-zoomControlBar rounded-full overflow-hidden hidden sm:block">
                                                                     <div 
                                                                         className={`h-full rounded-full transition-all duration-500 ${averageScore < 50 ? 'bg-stateRed' : averageScore < 75 ? 'bg-stateYellow' : 'bg-stateGreen'}`}
                                                                         style={{ width: `${Math.min(100, Math.max(0, averageScore))}%` }}
@@ -857,16 +838,10 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 px-4 font-bold text-zoomText text-xs">
-                                                            {p.score}%
-                                                        </td>
                                                         <td className="py-3 px-4">
                                                             <span className={`border px-2.5 py-1 rounded text-[10px] ${warnBadge}`}>
                                                                 {warnLabel}
                                                             </span>
-                                                        </td>
-                                                        <td className="py-3 px-4 text-zoomTextSec font-mono text-[10px]">
-                                                            {new Date(p.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                         </td>
                                                         <td className="py-3 px-4 text-right">
                                                             <button 
@@ -885,47 +860,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                 </table>
                             </div>
                         </div>
-
-                        {/* Distraction Incident Events Log (Only visible when incidents happen) */}
-                        {logs.length > 0 && (
-                            <div className="glass-panel p-6 rounded-2xl">
-                                <h3 className="text-xs font-bold text-zoomTextSec uppercase tracking-wider mb-4 flex items-center gap-2">
-                                    <span>⚠️</span> Incident Distraction Events History ({logs.length})
-                                </h3>
-                                
-                                <div className="overflow-x-auto w-full">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="border-b border-zoomBorder text-[10px] font-semibold text-zoomTextSec uppercase tracking-wider">
-                                                <th className="py-2.5 px-4">Student</th>
-                                                <th className="py-2.5 px-4">Incident State</th>
-                                                <th className="py-2.5 px-4">Attention Score</th>
-                                                <th className="py-2.5 px-4">Warnings at Incident</th>
-                                                <th className="py-2.5 px-4">Timestamp</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zoomBorder text-xs">
-                                            {logs.map((log, idx) => {
-                                                let badgeColor = 'bg-stateRed/10 text-stateRed border-stateRed/20';
-                                                if (log.state === 'Distracted') badgeColor = 'bg-stateYellow/10 text-stateYellow border-stateYellow/20';
-
-                                                return (
-                                                    <tr key={idx} className="hover:bg-zoomControlBar/40 transition-all">
-                                                        <td className="py-2.5 px-4 font-bold text-zoomText">{log.username}</td>
-                                                        <td className="py-2.5 px-4">
-                                                            <span className={`border px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>{log.state}</span>
-                                                        </td>
-                                                        <td className="py-2.5 px-4 font-bold text-zoomText">{log.score}%</td>
-                                                        <td className="py-2.5 px-4 text-zoomTextSec">{log.warnings} / 3</td>
-                                                        <td className="py-2.5 px-4 text-zoomTextSec font-mono text-[10px]">{log.timestamp}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
 
                     </div>
                 </div>
