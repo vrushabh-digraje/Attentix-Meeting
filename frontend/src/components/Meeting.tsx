@@ -636,14 +636,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         const score = results.attentionScore;
         const state = results.state;
 
+        // If current user is host, host is never evaluated for inattention warnings or student score broadcasts
         if (meeting.role === 'host') {
-            setParticipantScores(prev => ({
-                ...prev,
-                [user.id]: {
-                    username: "You (Host)",
-                    score: Math.round(score)
-                }
-            }));
+            return;
         }
 
         // Local Warning Alert logic (Score < 20% continuously for 2 minutes)
@@ -688,6 +683,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     };
 
     const triggerInattentionWarning = (state: string) => {
+        // Absolutely no warnings for the host
+        if (meeting.role === 'host') return;
         if (warningCountRef.current >= 3) return; // Locked at max 3 warnings
         
         warningCountRef.current++;
@@ -1146,7 +1143,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                         )}
 
                         {/* Warning Alert Popup (Zoom notification toast at bottom-left) */}
-                        {showWarning && (
+                        {meeting.role !== 'host' && showWarning && (
                             <div className="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-zoomPanel shadow-2xl z-50 flex flex-col items-center text-center">
                                 <div className="text-stateRed text-xl mb-1"><AlertTriangle /></div>
                                 <h3 className="text-stateRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>

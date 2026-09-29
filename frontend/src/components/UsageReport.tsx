@@ -21,6 +21,9 @@ interface ParticipantRecord {
     lastActive: number;
     lowAttentionStart: number | null;
     alertTriggered: boolean;
+    scoresCount?: number;
+    scoresSum?: number;
+    avgScore?: number;
 }
 
 interface DistractionLog {
@@ -149,6 +152,9 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
 
         // Listen for real-time focus log updates
         socket.on('attention-score-update', (incomingData: any) => {
+            // Never track or display host in student distraction and engagement logs
+            if (incomingData.user_id === user.id) return;
+
             const data = {
                 user_id: incomingData.user_id,
                 username: incomingData.username,
@@ -175,22 +181,31 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                     alertTriggered = false;
                 }
 
+                const prevCount = previousRecord ? (previousRecord.scoresCount || 0) : 0;
+                const prevSum = previousRecord ? (previousRecord.scoresSum || 0) : 0;
+                const newCount = prevCount + 1;
+                const newSum = prevSum + data.attention_score;
+                const avgScore = Math.round(newSum / newCount);
+
                 const updated = {
                     ...prev,
                     [data.user_id]: {
                         user_id: data.user_id,
                         username: data.username,
                         score: data.attention_score,
-                        state: data.state,
+                        state: data.state as any,
                         warnings: data.warnings_count,
                         lastActive: Date.now(),
                         lowAttentionStart,
-                        alertTriggered
+                        alertTriggered,
+                        scoresCount: newCount,
+                        scoresSum: newSum,
+                        avgScore: avgScore
                     }
                 };
 
                 // Update Doughnut states dynamically on data arrival
-                updateDoughnutStates(Object.values(updated));
+                updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
                 return updated;
             });
 
@@ -210,13 +225,39 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
             }
         });
 
+        // Peer joined
+        socket.on('peer-joined', (peer: any) => {
+            if (peer.user_id === user.id) return;
+            setParticipants(prev => {
+                if (prev[peer.user_id]) return prev;
+                const updated = {
+                    ...prev,
+                    [peer.user_id]: {
+                        user_id: peer.user_id,
+                        username: peer.username,
+                        score: 100,
+                        state: 'Attentive' as const,
+                        warnings: 0,
+                        lastActive: Date.now(),
+                        lowAttentionStart: null,
+                        alertTriggered: false,
+                        scoresCount: 0,
+                        scoresSum: 0,
+                        avgScore: 100
+                    }
+                };
+                updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
+                return updated;
+            });
+        });
+
         // Peer disconnected
         socket.on('peer-left', (data: any) => {
             const peerId = data.user_id;
             setParticipants(prev => {
                 const copy = { ...prev };
                 delete copy[peerId];
-                updateDoughnutStates(Object.values(copy));
+                updateDoughnutStates(Object.values(copy).filter(p => p.user_id !== user.id));
                 return copy;
             });
         });
@@ -226,7 +267,77 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
             if (trendChartRef.current) trendChartRef.current.destroy();
             if (stateChartRef.current) stateChartRef.current.destroy();
         };
-    }, [meeting.meetingId]);
+    }, [meeting.meetingId, user.id]);
+
+    // Fetch historical analytics logs on mount to prepopulate students who already joined
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const res = await fetch(`${apiBase}/api/analytics/${meeting.meetingId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        const historyMap: { [key: number]: ParticipantRecord } = {};
+                        const incidentList: DistractionLog[] = [];
+
+                        data.forEach((item: any) => {
+                            if (item.user_id === user.id) return; // skip host
+
+                            const uId = item.user_id;
+                            if (!historyMap[uId]) {
+                                historyMap[uId] = {
+                                    user_id: uId,
+                                    username: item.username,
+                                    score: Math.round(item.attention_score),
+                                    state: item.state,
+                                    warnings: item.warnings_count || 0,
+                                    lastActive: new Date(item.timestamp).getTime(),
+                                    lowAttentionStart: null,
+                                    alertTriggered: false,
+                                    scoresCount: 1,
+                                    scoresSum: item.attention_score,
+                                    avgScore: Math.round(item.attention_score)
+                                };
+                            } else {
+                                const rec = historyMap[uId];
+                                rec.score = Math.round(item.attention_score);
+                                rec.state = item.state;
+                                rec.warnings = Math.max(rec.warnings, item.warnings_count || 0);
+                                rec.lastActive = Math.max(rec.lastActive, new Date(item.timestamp).getTime());
+                                rec.scoresCount = (rec.scoresCount || 0) + 1;
+                                rec.scoresSum = (rec.scoresSum || 0) + item.attention_score;
+                                rec.avgScore = Math.round(rec.scoresSum / rec.scoresCount);
+                            }
+
+                            if (item.state !== 'Attentive') {
+                                incidentList.push({
+                                    username: item.username,
+                                    state: item.state,
+                                    score: Math.round(item.attention_score),
+                                    warnings: item.warnings_count || 0,
+                                    timestamp: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                });
+                            }
+                        });
+
+                        setParticipants(prev => {
+                            const merged = { ...historyMap, ...prev };
+                            updateDoughnutStates(Object.values(merged).filter(p => p.user_id !== user.id));
+                            return merged;
+                        });
+
+                        if (incidentList.length > 0) {
+                            setLogs(prev => [...incidentList.reverse().slice(0, 30), ...prev].slice(0, 30));
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load historical analytics:", err);
+            }
+        };
+
+        fetchHistory();
+    }, [meeting.meetingId, apiBase, user.id]);
 
     // 2. Periodically update the trend line chart (every 3 seconds)
     useEffect(() => {
@@ -288,7 +399,7 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
     };
 
     const handleDownloadCSV = () => {
-        const activeList = Object.values(participants);
+        const activeList = Object.values(participants).filter(p => p.user_id !== user.id);
         if (activeList.length === 0) {
             alert("No participant data available to download.");
             return;
@@ -300,16 +411,17 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
         csvContent += `Attentix Classroom Engagement Report\n`;
         csvContent += `Meeting ID,${meeting.roomCode}\n`;
         csvContent += `Date,${new Date().toLocaleDateString()}\n`;
-        csvContent += `Total Participants,${activeList.length}\n`;
+        csvContent += `Total Students,${activeList.length}\n`;
         csvContent += `Average Classroom Attention,${avgScore}%\n\n`;
         
         // Add table headers
-        csvContent += `Participant Name,Attention Score (%),State,Warnings Count,Last Active Time\n`;
+        csvContent += `Student Name,Average Attention (%),Latest Score (%),State,Warnings Count,Last Active Time\n`;
         
         // Add row data
         activeList.forEach(p => {
             const timeStr = new Date(p.lastActive).toLocaleTimeString();
-            csvContent += `"${p.username}",${p.score}%,${p.state},${p.warnings},"${timeStr}"\n`;
+            const avgVal = p.avgScore !== undefined ? p.avgScore : p.score;
+            csvContent += `"${p.username}",${avgVal}%,${p.score}%,${p.state},${p.warnings},"${timeStr}"\n`;
         });
 
         // Append distraction incidents log if available
@@ -332,7 +444,7 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
     };
 
     const handleDownloadHTML = () => {
-        const activeList = Object.values(participants);
+        const activeList = Object.values(participants).filter(p => p.user_id !== user.id);
         if (activeList.length === 0) {
             alert("No participant data available to download.");
             return;
@@ -479,9 +591,9 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
         document.body.removeChild(link);
     };
 
-    const activeList = Object.values(participants);
+    const activeList = Object.values(participants).filter(p => p.user_id !== user.id);
     const avgScore = activeList.length > 0 
-        ? Math.round(activeList.reduce((acc, curr) => acc + curr.score, 0) / activeList.length) 
+        ? Math.round(activeList.reduce((acc, curr) => acc + (curr.avgScore !== undefined ? curr.avgScore : curr.score), 0) / activeList.length) 
         : 0;
 
     return (
@@ -640,28 +752,160 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                             )}
                         </div>
 
-                        {/* Logs Table */}
+                        {/* Student Performance & Warning Summary Table */}
                         <div className="glass-panel p-6 rounded-2xl">
-                            <h3 className="text-xs font-bold text-zoomTextSec uppercase tracking-wider mb-4">Distraction Logs</h3>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-zoomBorder">
+                                <div>
+                                    <h3 className="text-sm font-bold text-zoomText uppercase tracking-wider flex items-center gap-2">
+                                        <span>👨‍🎓</span> Student Attention & Warning Summary
+                                    </h3>
+                                    <p className="text-[11px] text-zoomTextSec mt-0.5">
+                                        Live classroom overview: all enrolled students, their average focus scores, and warning counters
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold px-3 py-1 bg-zoomBlue/15 text-zoomBlue rounded-full border border-zoomBlue/30 w-fit">
+                                        {activeList.length} {activeList.length === 1 ? 'Student' : 'Students'} Tracked
+                                    </span>
+                                </div>
+                            </div>
                             
                             <div className="overflow-x-auto w-full">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b border-zoomBorder text-[10px] font-semibold text-zoomTextSec uppercase tracking-wider">
-                                            <th className="py-2.5 px-4">Student</th>
-                                            <th className="py-2.5 px-4">Incident State</th>
-                                            <th className="py-2.5 px-4">Attention Score</th>
-                                            <th className="py-2.5 px-4">Warnings</th>
-                                            <th className="py-2.5 px-4">Timestamp</th>
+                                        <tr className="border-b border-zoomBorder text-[10px] font-bold text-zoomTextSec uppercase tracking-wider bg-zoomControlBar/30">
+                                            <th className="py-3 px-4">Student</th>
+                                            <th className="py-3 px-4">Current State</th>
+                                            <th className="py-3 px-4">Avg Score</th>
+                                            <th className="py-3 px-4">Latest Score</th>
+                                            <th className="py-3 px-4">Warnings Received</th>
+                                            <th className="py-3 px-4">Last Active</th>
+                                            <th className="py-3 px-4 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zoomBorder text-xs">
-                                        {logs.length === 0 ? (
+                                        {activeList.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="py-6 text-center text-zoomTextSec text-[11px]">No focus alert events logged.</td>
+                                                <td colSpan={7} className="py-10 text-center text-zoomTextSec text-[11px]">
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <span className="text-2xl mb-2">👨‍🎓</span>
+                                                        <span className="font-semibold text-zoomText">No students connected yet.</span>
+                                                        <span className="text-[10px] text-zoomTextSec/80 mt-1 max-w-sm">
+                                                            When students join the meeting, all student names, their real-time average attention scores, and warning logs will automatically appear here.
+                                                        </span>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ) : (
-                                            logs.map((log, idx) => {
+                                            activeList.map((p) => {
+                                                const averageScore = p.avgScore !== undefined ? p.avgScore : p.score;
+
+                                                let badgeColor = 'bg-stateGreen/10 text-stateGreen border-stateGreen/30';
+                                                let badgeDot = 'bg-stateGreen';
+                                                if (p.state === 'Distracted') {
+                                                    badgeColor = 'bg-stateYellow/10 text-stateYellow border-stateYellow/30';
+                                                    badgeDot = 'bg-stateYellow';
+                                                } else if (p.state === 'Inactive') {
+                                                    badgeColor = 'bg-stateRed/10 text-stateRed border-stateRed/30';
+                                                    badgeDot = 'bg-stateRed';
+                                                }
+
+                                                let avgScoreColor = 'text-stateGreen';
+                                                if (averageScore < 50) avgScoreColor = 'text-stateRed';
+                                                else if (averageScore < 75) avgScoreColor = 'text-stateYellow';
+
+                                                let warnBadge = 'bg-zoomControlBar text-zoomTextSec border-zoomBorder';
+                                                let warnLabel = '0 / 3 (Good)';
+                                                if (p.warnings === 1) {
+                                                    warnBadge = 'bg-stateYellow/15 text-stateYellow border-stateYellow/30 font-bold';
+                                                    warnLabel = '1 / 3 (Notice)';
+                                                } else if (p.warnings === 2) {
+                                                    warnBadge = 'bg-amber-500/20 text-amber-400 border-amber-500/40 font-bold';
+                                                    warnLabel = '2 / 3 (Warning)';
+                                                } else if (p.warnings >= 3) {
+                                                    warnBadge = 'bg-stateRed/25 text-stateRed border-stateRed/50 font-black animate-pulse';
+                                                    warnLabel = '3 / 3 (Limit Reached)';
+                                                }
+
+                                                return (
+                                                    <tr key={p.user_id} className="hover:bg-zoomControlBar/40 transition-all">
+                                                        <td className="py-3 px-4 font-bold text-zoomText">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-zoomBlue to-indigo-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md">
+                                                                    {p.username.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-bold text-zoomText text-sm">{p.username}</div>
+                                                                    <div className="text-[10px] text-zoomTextSec font-normal">Student ID #{p.user_id}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <span className={`inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-full text-[10px] font-semibold ${badgeColor}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${badgeDot}`}></span>
+                                                                {p.state}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4 font-black">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <span className={`text-sm ${avgScoreColor}`}>{averageScore}%</span>
+                                                                <div className="w-16 h-1.5 bg-zoomControlBar rounded-full overflow-hidden hidden sm:block">
+                                                                    <div 
+                                                                        className={`h-full rounded-full transition-all duration-500 ${averageScore < 50 ? 'bg-stateRed' : averageScore < 75 ? 'bg-stateYellow' : 'bg-stateGreen'}`}
+                                                                        style={{ width: `${Math.min(100, Math.max(0, averageScore))}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-4 font-bold text-zoomText text-xs">
+                                                            {p.score}%
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <span className={`border px-2.5 py-1 rounded text-[10px] ${warnBadge}`}>
+                                                                {warnLabel}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-zoomTextSec font-mono text-[10px]">
+                                                            {new Date(p.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-right">
+                                                            <button 
+                                                                onClick={() => handleRemoveParticipant(p.user_id, p.username)}
+                                                                className="px-2.5 py-1 border border-stateRed/40 hover:bg-stateRed hover:text-white rounded text-[10px] font-bold text-stateRed bg-transparent transition-all"
+                                                                title={`Remove ${p.username} from meeting`}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Distraction Incident Events Log (Only visible when incidents happen) */}
+                        {logs.length > 0 && (
+                            <div className="glass-panel p-6 rounded-2xl">
+                                <h3 className="text-xs font-bold text-zoomTextSec uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>⚠️</span> Incident Distraction Events History ({logs.length})
+                                </h3>
+                                
+                                <div className="overflow-x-auto w-full">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-zoomBorder text-[10px] font-semibold text-zoomTextSec uppercase tracking-wider">
+                                                <th className="py-2.5 px-4">Student</th>
+                                                <th className="py-2.5 px-4">Incident State</th>
+                                                <th className="py-2.5 px-4">Attention Score</th>
+                                                <th className="py-2.5 px-4">Warnings at Incident</th>
+                                                <th className="py-2.5 px-4">Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zoomBorder text-xs">
+                                            {logs.map((log, idx) => {
                                                 let badgeColor = 'bg-stateRed/10 text-stateRed border-stateRed/20';
                                                 if (log.state === 'Distracted') badgeColor = 'bg-stateYellow/10 text-stateYellow border-stateYellow/20';
 
@@ -672,16 +916,16 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                                                             <span className={`border px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>{log.state}</span>
                                                         </td>
                                                         <td className="py-2.5 px-4 font-bold text-zoomText">{log.score}%</td>
-                                                        <td className="py-2.5 px-4 text-zoomTextSec">{log.warnings}/3</td>
+                                                        <td className="py-2.5 px-4 text-zoomTextSec">{log.warnings} / 3</td>
                                                         <td className="py-2.5 px-4 text-zoomTextSec font-mono text-[10px]">{log.timestamp}</td>
                                                     </tr>
                                                 );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                     </div>
                 </div>
