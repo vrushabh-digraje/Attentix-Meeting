@@ -34,7 +34,7 @@ def test_google_oauth():
         print("   2. Create OAuth 2.0 Web Client ID")
         print("   3. Add Authorized Javascript Origins:")
         print("      - https://attentix-app.vercel.app")
-        print("      - https://vrushabh-digraje--attentix-backend-attentix-app.modal.run")
+        print("      - https://vrushabhdigraje09--attentix-backend-attentix-app.modal.run")
         print("   4. Set GOOGLE_CLIENT_ID in backend/.env")
     else:
         print(f"✅ Status: Google Client ID configured!")
