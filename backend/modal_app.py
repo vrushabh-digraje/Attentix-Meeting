@@ -101,6 +101,48 @@ def list_users():
     image=image,
     volumes={"/data": db_volume}
 )
+def inspect_database():
+    import sys
+    sys.path.append("/root/backend")
+    initialize_persistent_db()
+    
+    from database import DatabaseManager, User, Meeting, Participant, ScheduledMeeting, AttentionLog
+    db = DatabaseManager(os.environ.get("DATABASE_URL"))
+    session = db.get_session()
+    
+    users = session.query(User).all()
+    print("\n" + "=" * 65)
+    print(f"👥 REGISTERED USERS ({len(users)} total):")
+    print("=" * 65)
+    for u in users:
+        print(f"  • ID {u.id}: {u.username.ljust(18)} | Email: {u.email}")
+        
+    meetings = session.query(Meeting).all()
+    print("\n" + "=" * 65)
+    print(f"📹 MEETINGS ({len(meetings)} total):")
+    print("=" * 65)
+    for m in meetings:
+        print(f"  • Meeting #{m.meeting_number} | Host ID: {m.host_id} | Started: {m.start_time} | Active: {m.is_active}")
+        
+    sched = session.query(ScheduledMeeting).all()
+    print("\n" + "=" * 65)
+    print(f"📅 SCHEDULED MEETINGS ({len(sched)} total):")
+    print("=" * 65)
+    for s in sched:
+        print(f"  • Meeting #{s.meeting_number} | Topic: {s.topic} | Time: {s.scheduled_time} | Duration: {s.duration}m")
+        
+    participants = session.query(Participant).all()
+    print("\n" + "=" * 65)
+    print(f"🎓 PARTICIPANT ATTENDANCE RECORDS ({len(participants)} total):")
+    print("=" * 65)
+    for p in participants:
+        print(f"  • Meeting ID {p.meeting_id} | User ID {p.user_id} | Role: {p.role} | Joined: {p.joined_at}")
+    print("=" * 65 + "\n")
+
+@app.function(
+    image=image,
+    volumes={"/data": db_volume}
+)
 def reset_passwords():
     import sys
     sys.path.append("/root/backend")
