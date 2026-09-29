@@ -53,7 +53,6 @@ def initialize_persistent_db():
 @app.function(
     image=image,
     volumes={"/data": db_volume},
-    min_containers=1,
     max_containers=1,
     scaledown_window=300,
     secrets=[
