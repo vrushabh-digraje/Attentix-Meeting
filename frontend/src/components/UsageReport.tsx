@@ -89,13 +89,13 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                     datasets: [{
                         label: 'Average Attention Score (%)',
                         data: [],
-                        borderColor: '#06b6d4',
-                        backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                        borderColor: '#0E71EB',
+                        backgroundColor: 'rgba(14, 113, 235, 0.08)',
                         borderWidth: 2,
                         tension: 0.4,
                         fill: true,
                         pointRadius: 2,
-                        pointBackgroundColor: '#06b6d4'
+                        pointBackgroundColor: '#0E71EB'
                     }]
                 },
                 options: {
@@ -614,15 +614,15 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                     </button>
                     <button 
                         onClick={handleDownloadCSV}
-                        className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-white/10 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
                     >
                         📄 Download CSV
                     </button>
                     <button 
                         onClick={onReturnToMeeting}
-                        className="flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-slate-200 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
+                        className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-white/10 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
                     >
-                        <ArrowLeft size={12} /> Return to Room
+                        <ArrowLeft size={16} /> Return to Room
                     </button>
                     <span className="bg-zoomControlBar border border-zoomBorder px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-[10px] sm:text-xs text-zoomTextSec font-medium">
                         Host
@@ -637,8 +637,8 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                     
                     {/* 📋 LEFT SIDEBAR PANEL: Participant Name & Attention Score Only */}
                     <div className="lg:col-span-1 bg-zoomPanel border border-zoomBorder p-6 rounded-2xl flex flex-col gap-4 lg:sticky lg:top-24 max-h-[calc(100vh-140px)] overflow-y-auto shadow-sm">
-                        <h3 className="text-[10px] font-bold text-zoomTextSec uppercase tracking-widest mb-2 flex items-center gap-2 pb-3 border-b border-zoomBorder">
-                            <Users size={12} /> Live Scoreboard
+                        <h3 className="text-xs font-bold text-zoomTextSec uppercase tracking-widest mb-2 flex items-center gap-2 pb-3 border-b border-zoomBorder">
+                            <Users size={16} /> Live Scoreboard
                         </h3>
                         
                         <div className="flex flex-col gap-3">

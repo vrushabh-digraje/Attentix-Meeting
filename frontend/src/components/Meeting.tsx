@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video as VideoIcon, VideoOff, Share2, Users, AlertTriangle, LogOut } from 'lucide-react';
+import { Mic, MicOff, Video as VideoIcon, VideoOff, Share2, Users, AlertTriangle, LogOut, MessageSquare, MonitorUp, BarChart2, BarChart3, UserPlus } from 'lucide-react';
 import { UserSession, MeetingSession } from '../App';
 import { AttentionEngine } from '../utils/attentionEngine';
 import { WebRTCHandler } from '../utils/webrtcHandler';
@@ -1277,100 +1277,126 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 )}
             </div>
 
-            {/* Bottom Controls bar */}
-            <div className="h-[75px] bg-zoomControlBar border-t border-zoomBorder flex justify-between items-center px-2 sm:px-4 md:px-8 z-50 gap-1.5">
+            {/* Bottom Controls bar (Zoom Style) */}
+            <div className="h-[72px] bg-zoomControlBar border-t border-zoomBorder flex justify-between items-center px-3 sm:px-6 md:px-8 z-50 select-none">
                 
-                {/* Audio/Video */}
-                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
+                {/* Left Group: Audio & Video */}
+                <div className="flex items-center gap-1 sm:gap-2">
                     <button 
                         onClick={handleToggleAudio}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${audioEnabled ? 'bg-[#090A0F] border-2 border-zoomBlue text-zoomBlue shadow-[0_0_15px_rgba(0,242,254,0.25)] hover:bg-[#131520]' : 'bg-[#090A0F] border-2 border-stateRed text-stateRed shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-[#131520]'}`}
+                        className="flex flex-col items-center justify-center min-w-[54px] sm:min-w-[62px] py-1 px-1.5 sm:px-2 rounded-lg hover:bg-white/10 transition-colors group"
                         title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
                     >
-                        {audioEnabled ? <Mic size={14} className="sm:size-[16px] md:size-[18px]" /> : <MicOff size={14} className="sm:size-[16px] md:size-[18px]" />}
+                        {audioEnabled ? (
+                            <Mic size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                        ) : (
+                            <MicOff size={21} className="text-stateRed" />
+                        )}
+                        <span className={`text-[10px] mt-1 font-medium transition-colors ${audioEnabled ? 'text-slate-300 group-hover:text-white' : 'text-stateRed'}`}>
+                            {audioEnabled ? "Mute" : "Unmute"}
+                        </span>
                     </button>
                     <button 
                         onClick={handleToggleVideo}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${videoEnabled ? 'bg-[#090A0F] border-2 border-zoomBlue text-zoomBlue shadow-[0_0_15px_rgba(0,242,254,0.25)] hover:bg-[#131520]' : 'bg-[#090A0F] border-2 border-stateRed text-stateRed shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:bg-[#131520]'}`}
-                        title={videoEnabled ? "Stop Camera" : "Start Camera"}
+                        className="flex flex-col items-center justify-center min-w-[54px] sm:min-w-[62px] py-1 px-1.5 sm:px-2 rounded-lg hover:bg-white/10 transition-colors group"
+                        title={videoEnabled ? "Stop Video" : "Start Video"}
                     >
-                        {videoEnabled ? <VideoIcon size={14} className="sm:size-[16px] md:size-[18px]" /> : <VideoOff size={14} className="sm:size-[16px] md:size-[18px]" />}
+                        {videoEnabled ? (
+                            <VideoIcon size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                        ) : (
+                            <VideoOff size={21} className="text-stateRed" />
+                        )}
+                        <span className={`text-[10px] mt-1 font-medium transition-colors ${videoEnabled ? 'text-slate-300 group-hover:text-white' : 'text-stateRed'}`}>
+                            {videoEnabled ? "Stop Video" : "Start Video"}
+                        </span>
                     </button>
                 </div>
 
-                {/* Center tools */}
-                <div className="flex items-center gap-1 sm:gap-1.5 md:gap-3">
+                {/* Center Group: Zoom Meeting Tools */}
+                <div className="flex items-center gap-0.5 sm:gap-1.5 md:gap-3">
                     <button 
                         onClick={handleCopyInviteLink}
-                        className="w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center bg-[#090A0F] border-2 border-zoomBorder hover:border-zoomBlue hover:text-zoomBlue hover:shadow-[0_0_15px_rgba(0,242,254,0.25)] text-zoomText transition-all"
+                        className="flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors group"
                         title="Copy Invite Link"
                     >
-                        <Share2 size={14} className="sm:size-[16px] md:size-[18px]" />
+                        <UserPlus size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                        <span className="text-[10px] mt-1 font-medium text-slate-300 group-hover:text-white">Invite</span>
                     </button>
-                    <button 
-                        onClick={handleToggleScreenShare}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full items-center justify-center transition-all hidden md:flex ${isScreenSharing ? 'bg-[#090A0F] border-2 border-stateGreen text-stateGreen shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse' : 'bg-[#090A0F] border-2 border-zoomBorder hover:border-zoomBlue hover:text-zoomBlue hover:shadow-[0_0_15px_rgba(0,242,254,0.25)] text-zoomText transition-all'}`}
-                        title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
-                    >
-                        <span className="text-xs sm:text-sm md:text-base">🖥️</span>
-                    </button>
-                    <button 
-                        onClick={() => {
-                            setShowChatSidebar(!showChatSidebar);
-                            setShowParticipantsSidebar(false);
-                        }}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showChatSidebar ? 'bg-zoomBlue text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
-                        title="Open Chat"
-                    >
-                        <span className="text-xs sm:text-sm md:text-base">💬</span>
-                    </button>
+
                     <button 
                         onClick={() => {
                             setShowParticipantsSidebar(!showParticipantsSidebar);
                             setShowChatSidebar(false);
                         }}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all relative ${showParticipantsSidebar ? 'bg-zoomBlue text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
-                        title="Show Participants"
+                        className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg transition-colors group ${showParticipantsSidebar ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`}
+                        title="Participants"
                     >
-                        <Users size={14} className="sm:size-[16px] md:size-[18px]" />
-                        <span className="absolute -top-0.5 -right-0.5 bg-zoomBlue text-white text-[7px] px-1 rounded-full font-bold shadow-md">
-                            {peerIds.length + 1}
+                        <div className="relative">
+                            <Users size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                            <span className="absolute -top-1 -right-2 bg-zoomBlue text-white text-[8px] font-bold px-1 rounded-full leading-tight">
+                                {peerIds.length + 1}
+                            </span>
+                        </div>
+                        <span className="text-[10px] mt-1 font-medium">Participants</span>
+                    </button>
+
+                    <button 
+                        onClick={() => {
+                            setShowChatSidebar(!showChatSidebar);
+                            setShowParticipantsSidebar(false);
+                        }}
+                        className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg transition-colors group ${showChatSidebar ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`}
+                        title="Open Chat"
+                    >
+                        <MessageSquare size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                        <span className="text-[10px] mt-1 font-medium">Chat</span>
+                    </button>
+
+                    <button 
+                        onClick={handleToggleScreenShare}
+                        className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg transition-colors group ${isScreenSharing ? 'bg-stateGreen/20 text-stateGreen' : 'hover:bg-white/10 text-stateGreen'}`}
+                        title={isScreenSharing ? "Stop Sharing Screen" : "Share Screen"}
+                    >
+                        <MonitorUp size={21} className={`${isScreenSharing ? 'text-stateGreen animate-pulse' : 'text-stateGreen'}`} />
+                        <span className="text-[10px] mt-1 font-semibold text-stateGreen">
+                            {isScreenSharing ? "Sharing" : "Share Screen"}
                         </span>
                     </button>
-                    
+
                     {meeting.role === 'host' && (
                         <button 
                             onClick={() => setShowScoreboard(!showScoreboard)}
-                            className={`w-8 h-8 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-full flex items-center justify-center transition-all ${showScoreboard ? 'bg-zoomOrange text-white' : 'bg-zoomCard border border-zoomBorder hover:bg-slate-200 text-zoomText'}`}
-                            title="Toggle Scoreboard"
+                            className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg transition-colors group ${showScoreboard ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`}
+                            title="Toggle Live Scoreboard"
                         >
-                            <span className="text-xs sm:text-sm md:text-base">📊</span>
+                            <BarChart2 size={21} className="text-slate-200 group-hover:text-white transition-colors" />
+                            <span className="text-[10px] mt-1 font-medium">Scoreboard</span>
                         </button>
                     )}
-                    
+
                     {meeting.role === 'host' && (
                         <button 
                             onClick={onOpenDashboard}
-                            className="ml-1 sm:ml-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 md:px-5 md:py-2.5 rounded-full bg-zoomBlue hover:bg-zoomBlueHover text-white text-[10px] md:text-xs font-bold transition-all shadow-lg hover:scale-[1.02]"
-                            title="Usage Reports"
+                            className="flex flex-col items-center justify-center min-w-[50px] sm:min-w-[60px] py-1 px-1.5 sm:px-2 rounded-lg hover:bg-white/10 transition-colors text-zoomBlue group"
+                            title="Usage Reports & Analytics"
                         >
-                            <span className="md:hidden">📊</span>
-                            <span className="hidden md:inline">📊 Usage Reports</span>
+                            <BarChart3 size={21} className="text-zoomBlue group-hover:brightness-125 transition-all" />
+                            <span className="text-[10px] mt-1 font-bold text-zoomBlue">Reports</span>
                         </button>
                     )}
                 </div>
 
-                {/* End / Leave button */}
+                {/* Right Group: Zoom End / Leave Button */}
                 <div className="shrink-0">
                     <button 
                         onClick={() => {
-                            if (confirm("Leave this meeting session?")) {
+                            if (confirm(meeting.role === 'host' ? "End meeting for all or leave session?" : "Leave this meeting session?")) {
                                 onLeave();
                             }
                         }}
-                        className="px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-2 rounded-full bg-[#EF4444] hover:bg-[#DC2626] text-white text-[10px] md:text-xs font-extrabold transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:scale-[1.02]"
+                        className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-stateRed hover:bg-[#C92020] text-white text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95"
                     >
-                        Leave
+                        {meeting.role === 'host' ? 'End' : 'Leave'}
                     </button>
                 </div>
 
