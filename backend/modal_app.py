@@ -143,6 +143,28 @@ def inspect_database():
     image=image,
     volumes={"/data": db_volume}
 )
+def clear_database():
+    import sys
+    sys.path.append("/root/backend")
+    initialize_persistent_db()
+    
+    from database import DatabaseManager, Base
+    db = DatabaseManager(os.environ.get("DATABASE_URL"))
+    
+    print("\n[CLEAR DATABASE] Deleting all records and dropping tables...")
+    Base.metadata.drop_all(bind=db.engine)
+    
+    print("[CLEAR DATABASE] Recreating clean, empty tables...")
+    Base.metadata.create_all(bind=db.engine)
+    
+    # Force commit changes to Modal Volume
+    db_volume.commit()
+    print("✅ SUCCESS: All previous data has been completely deleted! The database is now 100% clean and fresh.\n")
+
+@app.function(
+    image=image,
+    volumes={"/data": db_volume}
+)
 def reset_passwords():
     import sys
     sys.path.append("/root/backend")
