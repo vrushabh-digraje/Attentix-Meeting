@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Chart, registerables } from 'chart.js';
-import { ArrowLeft, Users, AlertOctagon } from 'lucide-react';
+import { ArrowLeft, Users } from 'lucide-react';
 import { UserSession, MeetingSession } from '../App';
 
 Chart.register(...registerables);
@@ -19,8 +19,8 @@ interface ParticipantRecord {
     state: 'Attentive' | 'Distracted' | 'Inactive';
     warnings: number;
     lastActive: number;
-    lowAttentionStart: number | null;
-    alertTriggered: boolean;
+    lowAttentionStart?: number | null;
+    alertTriggered?: boolean;
     scoresCount?: number;
     scoresSum?: number;
     avgScore?: number;
@@ -51,32 +51,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
     // States
     const [participants, setParticipants] = useState<{ [key: number]: ParticipantRecord }>({});
     const [logs, setLogs] = useState<DistractionLog[]>([]);
-    
-    // Critical alert states
-    const [criticalAlertStudent, setCriticalAlertStudent] = useState<string | null>(null);
-
-    // Synthesize Host Alarm Tone
-    const playHostAlarm = () => {
-        try {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioContextClass) return;
-            const audioCtx = new AudioContextClass();
-            const now = audioCtx.currentTime;
-            
-            [now, now + 0.3].forEach((start) => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.frequency.setValueAtTime(880, start); // high pitch alarm tone
-                gain.gain.setValueAtTime(0.2, start);
-                osc.start(start);
-                osc.stop(start + 0.2);
-            });
-        } catch (e) {
-            console.warn('Host audio alarm blocked');
-        }
-    };
 
     // 1. Initialize Sockets & Charts
     useEffect(() => {
@@ -165,23 +139,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                 };
                 setParticipants(prev => {
                     const previousRecord = prev[data.user_id];
-                    let lowAttentionStart = previousRecord ? previousRecord.lowAttentionStart : null;
-                    let alertTriggered = previousRecord ? previousRecord.alertTriggered : false;
-
-                    // 3 minutes focus drop alarm: check < 30% focus
-                    if (data.attention_score < 30) {
-                        if (!lowAttentionStart) {
-                            lowAttentionStart = Date.now();
-                        } else if (Date.now() - lowAttentionStart >= 180000 && !alertTriggered) { // 180,000ms = 3 mins
-                            alertTriggered = true;
-                            setCriticalAlertStudent(data.username);
-                            playHostAlarm();
-                        }
-                    } else {
-                        lowAttentionStart = null;
-                        alertTriggered = false;
-                    }
-
                     const prevCount = previousRecord ? (previousRecord.scoresCount || 0) : 0;
                     const prevSum = previousRecord ? (previousRecord.scoresSum || 0) : 0;
                     const newCount = prevCount + 1;
@@ -197,8 +154,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                             state: data.state as any,
                             warnings: data.warnings_count,
                             lastActive: Date.now(),
-                            lowAttentionStart,
-                            alertTriggered,
                             scoresCount: newCount,
                             scoresSum: newSum,
                             avgScore: avgScore
@@ -875,27 +830,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                 </div>
 
             </div>
-
-            {/* Critical Alarm Modal Popup Overlay */}
-            {criticalAlertStudent && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="glass-panel p-8 rounded-2xl border border-stateRed shadow-2xl shadow-stateRed/25 max-w-sm w-full text-center mx-4">
-                        <div className="w-14 h-14 rounded-full bg-stateRed/15 text-stateRed flex items-center justify-center text-2xl mx-auto mb-4 animate-ping">
-                            <AlertOctagon />
-                        </div>
-                        <h3 className="text-stateRed font-extrabold text-xl tracking-wide mb-3">CRITICAL ALERT</h3>
-                        <p className="text-zoomText leading-relaxed text-xs mb-6">
-                            Participant <strong>{criticalAlertStudent}</strong>'s attention score has dropped below <strong>30%</strong> for more than <strong>3 minutes</strong>!
-                        </p>
-                        <button 
-                            onClick={() => setCriticalAlertStudent(null)}
-                            className="w-full py-2.5 rounded-lg bg-stateRed hover:bg-red-600 text-white font-bold transition-all text-sm"
-                        >
-                            Acknowledge Alert
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
