@@ -137,133 +137,137 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
             });
         }
 
-        // Connect Socket
-        const socket = io(apiBase);
-        socketRef.current = socket;
+        // Connect Socket only if meeting is active/live
+        if (!meeting.isPast) {
+            const socket = io(apiBase);
+            socketRef.current = socket;
 
-        socket.on('connect', () => {
-            console.log('Host Usage reports portal active.');
-            socket.emit('join-room', {
-                meeting_id: meeting.meetingId,
-                user_id: user.id,
-                username: user.username
+            socket.on('connect', () => {
+                console.log('Host Usage reports portal active.');
+                socket.emit('join-room', {
+                    meeting_id: meeting.meetingId,
+                    user_id: user.id,
+                    username: user.username
+                });
             });
-        });
 
-        // Listen for real-time focus log updates
-        socket.on('attention-score-update', (incomingData: any) => {
-            // Never track or display host in student distraction and engagement logs
-            if (incomingData.user_id === user.id) return;
+            // Listen for real-time focus log updates
+            socket.on('attention-score-update', (incomingData: any) => {
+                // Never track or display host in student distraction and engagement logs
+                if (incomingData.user_id === user.id) return;
 
-            const data = {
-                user_id: incomingData.user_id,
-                username: incomingData.username,
-                attention_score: incomingData.score,
-                state: incomingData.state || 'Attentive',
-                warnings_count: incomingData.warnings_count || 0
-            };
-            setParticipants(prev => {
-                const previousRecord = prev[data.user_id];
-                let lowAttentionStart = previousRecord ? previousRecord.lowAttentionStart : null;
-                let alertTriggered = previousRecord ? previousRecord.alertTriggered : false;
+                const data = {
+                    user_id: incomingData.user_id,
+                    username: incomingData.username,
+                    attention_score: incomingData.score,
+                    state: incomingData.state || 'Attentive',
+                    warnings_count: incomingData.warnings_count || 0
+                };
+                setParticipants(prev => {
+                    const previousRecord = prev[data.user_id];
+                    let lowAttentionStart = previousRecord ? previousRecord.lowAttentionStart : null;
+                    let alertTriggered = previousRecord ? previousRecord.alertTriggered : false;
 
-                // 3 minutes focus drop alarm: check < 30% focus
-                if (data.attention_score < 30) {
-                    if (!lowAttentionStart) {
-                        lowAttentionStart = Date.now();
-                    } else if (Date.now() - lowAttentionStart >= 180000 && !alertTriggered) { // 180,000ms = 3 mins
-                        alertTriggered = true;
-                        setCriticalAlertStudent(data.username);
-                        playHostAlarm();
+                    // 3 minutes focus drop alarm: check < 30% focus
+                    if (data.attention_score < 30) {
+                        if (!lowAttentionStart) {
+                            lowAttentionStart = Date.now();
+                        } else if (Date.now() - lowAttentionStart >= 180000 && !alertTriggered) { // 180,000ms = 3 mins
+                            alertTriggered = true;
+                            setCriticalAlertStudent(data.username);
+                            playHostAlarm();
+                        }
+                    } else {
+                        lowAttentionStart = null;
+                        alertTriggered = false;
                     }
-                } else {
-                    lowAttentionStart = null;
-                    alertTriggered = false;
+
+                    const prevCount = previousRecord ? (previousRecord.scoresCount || 0) : 0;
+                    const prevSum = previousRecord ? (previousRecord.scoresSum || 0) : 0;
+                    const newCount = prevCount + 1;
+                    const newSum = prevSum + data.attention_score;
+                    const avgScore = Math.round(newSum / newCount);
+
+                    const updated = {
+                        ...prev,
+                        [data.user_id]: {
+                            user_id: data.user_id,
+                            username: data.username,
+                            score: data.attention_score,
+                            state: data.state as any,
+                            warnings: data.warnings_count,
+                            lastActive: Date.now(),
+                            lowAttentionStart,
+                            alertTriggered,
+                            scoresCount: newCount,
+                            scoresSum: newSum,
+                            avgScore: avgScore
+                        }
+                    };
+
+                    // Update Doughnut states dynamically on data arrival
+                    updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
+                    return updated;
+                });
+
+                // Write logs if focus is not Attentive
+                if (data.state !== 'Attentive') {
+                    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    setLogs(prev => [
+                        {
+                            username: data.username,
+                            state: data.state,
+                            score: data.attention_score,
+                            warnings: data.warnings_count,
+                            timestamp: nowStr
+                        },
+                        ...prev.slice(0, 29) // cap logs at 30 rows
+                    ]);
                 }
-
-                const prevCount = previousRecord ? (previousRecord.scoresCount || 0) : 0;
-                const prevSum = previousRecord ? (previousRecord.scoresSum || 0) : 0;
-                const newCount = prevCount + 1;
-                const newSum = prevSum + data.attention_score;
-                const avgScore = Math.round(newSum / newCount);
-
-                const updated = {
-                    ...prev,
-                    [data.user_id]: {
-                        user_id: data.user_id,
-                        username: data.username,
-                        score: data.attention_score,
-                        state: data.state as any,
-                        warnings: data.warnings_count,
-                        lastActive: Date.now(),
-                        lowAttentionStart,
-                        alertTriggered,
-                        scoresCount: newCount,
-                        scoresSum: newSum,
-                        avgScore: avgScore
-                    }
-                };
-
-                // Update Doughnut states dynamically on data arrival
-                updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
-                return updated;
             });
 
-            // Write logs if focus is not Attentive
-            if (data.state !== 'Attentive') {
-                const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                setLogs(prev => [
-                    {
-                        username: data.username,
-                        state: data.state,
-                        score: data.attention_score,
-                        warnings: data.warnings_count,
-                        timestamp: nowStr
-                    },
-                    ...prev.slice(0, 29) // cap logs at 30 rows
-                ]);
-            }
-        });
-
-        // Peer joined
-        socket.on('peer-joined', (peer: any) => {
-            if (peer.user_id === user.id) return;
-            setParticipants(prev => {
-                if (prev[peer.user_id]) return prev;
-                const updated = {
-                    ...prev,
-                    [peer.user_id]: {
-                        user_id: peer.user_id,
-                        username: peer.username,
-                        score: 100,
-                        state: 'Attentive' as const,
-                        warnings: 0,
-                        lastActive: Date.now(),
-                        lowAttentionStart: null,
-                        alertTriggered: false,
-                        scoresCount: 0,
-                        scoresSum: 0,
-                        avgScore: 100
-                    }
-                };
-                updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
-                return updated;
+            // Peer joined
+            socket.on('peer-joined', (peer: any) => {
+                if (peer.user_id === user.id) return;
+                setParticipants(prev => {
+                    if (prev[peer.user_id]) return prev;
+                    const updated = {
+                        ...prev,
+                        [peer.user_id]: {
+                            user_id: peer.user_id,
+                            username: peer.username,
+                            score: 100,
+                            state: 'Attentive' as const,
+                            warnings: 0,
+                            lastActive: Date.now(),
+                            lowAttentionStart: null,
+                            alertTriggered: false,
+                            scoresCount: 0,
+                            scoresSum: 0,
+                            avgScore: 100
+                        }
+                    };
+                    updateDoughnutStates(Object.values(updated).filter(p => p.user_id !== user.id));
+                    return updated;
+                });
             });
-        });
 
-        // Peer disconnected
-        socket.on('peer-left', (data: any) => {
-            const peerId = data.user_id;
-            setParticipants(prev => {
-                const copy = { ...prev };
-                delete copy[peerId];
-                updateDoughnutStates(Object.values(copy).filter(p => p.user_id !== user.id));
-                return copy;
+            // Peer disconnected
+            socket.on('peer-left', (data: any) => {
+                const peerId = data.user_id;
+                setParticipants(prev => {
+                    const copy = { ...prev };
+                    delete copy[peerId];
+                    updateDoughnutStates(Object.values(copy).filter(p => p.user_id !== user.id));
+                    return copy;
+                });
             });
-        });
+        }
 
         return () => {
-            socket.disconnect();
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
             if (trendChartRef.current) trendChartRef.current.destroy();
             if (stateChartRef.current) stateChartRef.current.destroy();
         };
@@ -604,6 +608,11 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                 <div className="text-xl font-black text-zoomBlue flex flex-col sm:flex-row items-center gap-1 sm:gap-3 text-center sm:text-left">
                     <span>Attentix</span>
                     <span className="text-xs text-zoomTextSec font-normal">Usage & Attention Reports</span>
+                    {meeting.isPast && (
+                        <span className="text-[10px] bg-zoomBlue/20 text-zoomBlue border border-zoomBlue/30 px-2 py-0.5 rounded-full font-bold">
+                            Archived Session Report
+                        </span>
+                    )}
                 </div>
                 <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
                     <button 
@@ -622,13 +631,14 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                         onClick={onReturnToMeeting}
                         className="flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-zoomControlBar border border-zoomBorder hover:bg-white/10 text-zoomText font-semibold rounded-lg text-[10px] sm:text-xs transition-all"
                     >
-                        <ArrowLeft size={16} /> Return to Room
+                        <ArrowLeft size={16} /> {meeting.isPast ? "Back to Lobby" : "Return to Room"}
                     </button>
                     <span className="bg-zoomControlBar border border-zoomBorder px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-[10px] sm:text-xs text-zoomTextSec font-medium">
-                        Host
+                        {meeting.role === 'host' ? 'Host' : 'Participant'}
                     </span>
                 </div>
             </nav>
+
 
             <div className="max-w-7xl mx-auto py-10 px-6 w-full flex-grow flex flex-col gap-8">
                 

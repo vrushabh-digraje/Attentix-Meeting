@@ -118,6 +118,11 @@ class ScheduleMeetingSchema(BaseModel):
     scheduled_time: str
     duration: int
 
+class EndMeetingSchema(BaseModel):
+    meeting_id: int
+    user_id: int
+    logs: Optional[List[LogAttentionSchema]] = None
+
 # Helpers
 def generate_meeting_number():
     return ''.join(random.choices(string.digits, k=9))
@@ -875,6 +880,140 @@ async def get_scheduled_meetings(user_id: int):
                 "scheduled_time": m.scheduled_time.isoformat(),
                 "duration": m.duration
             })
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        session.close()
+
+# End Meeting API (Saves final session state and records permanently)
+@app.post("/api/meetings/end")
+async def end_meeting_api(data: EndMeetingSchema):
+    session = db_manager.get_session()
+    try:
+        meeting = session.query(Meeting).filter(Meeting.id == data.meeting_id).first()
+        if not meeting:
+            raise HTTPException(status_code=404, detail="Meeting not found")
+        
+        # Save any remaining logs buffered by the client
+        if data.logs:
+            for item in data.logs:
+                if item.user_id != meeting.host_id:
+                    new_log = AttentionLog(
+                        meeting_id=item.meeting_id,
+                        user_id=item.user_id,
+                        attention_score=item.attention_score,
+                        state=item.state,
+                        warnings_count=item.warnings_count,
+                        timestamp=datetime.utcnow()
+                    )
+                    session.add(new_log)
+
+        now = datetime.utcnow()
+        meeting.is_active = False
+        meeting.end_time = now
+        
+        # Mark all open participants as left
+        participants = session.query(Participant).filter(
+            Participant.meeting_id == data.meeting_id,
+            Participant.left_at == None
+        ).all()
+        for p in participants:
+            p.left_at = now
+            
+        session.commit()
+        
+        # Broadcast meeting-ended notification to all room participants
+        room = str(data.meeting_id)
+        await sio.emit('meeting-ended', {
+            'meeting_id': data.meeting_id,
+            'message': 'The host has ended this meeting session.'
+        }, room=room)
+        
+        return {
+            "status": "success",
+            "message": "Meeting ended and records saved successfully",
+            "meeting_id": data.meeting_id,
+            "end_time": now.isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        session.close()
+
+# Fetch Previous Meetings History for User
+@app.get("/api/meetings/history/{user_id}")
+async def get_meetings_history(user_id: int):
+    session = db_manager.get_session()
+    try:
+        # Find meetings where user is host
+        hosted_meetings = session.query(Meeting).filter(Meeting.host_id == user_id).all()
+        
+        # Find meetings where user is participant
+        participated = session.query(Participant).filter(Participant.user_id == user_id).all()
+        part_meeting_ids = [p.meeting_id for p in participated]
+        part_meetings = session.query(Meeting).filter(Meeting.id.in_(part_meeting_ids)).all() if part_meeting_ids else []
+        
+        # Merge unique meetings
+        meeting_map = {}
+        for m in hosted_meetings + part_meetings:
+            meeting_map[m.id] = m
+            
+        # Sort by start_time descending (most recent first)
+        all_meetings = sorted(
+            meeting_map.values(),
+            key=lambda x: x.start_time or datetime.min,
+            reverse=True
+        )
+        
+        results = []
+        for m in all_meetings:
+            host_user = session.query(User).filter(User.id == m.host_id).first()
+            host_name = host_user.username if host_user else "Unknown Host"
+            
+            # Calculate duration
+            start = m.start_time or datetime.utcnow()
+            end = m.end_time or (start if not m.is_active else datetime.utcnow())
+            duration_sec = max(0, (end - start).total_seconds())
+            duration_min = max(1, round(duration_sec / 60))
+            
+            # Count unique non-host participants
+            parts = session.query(Participant).filter(
+                Participant.meeting_id == m.id,
+                Participant.user_id != m.host_id
+            ).all()
+            unique_participants = len(set(p.user_id for p in parts))
+            
+            # Calculate average attention score from AttentionLog (excluding host)
+            logs = session.query(AttentionLog).filter(
+                AttentionLog.meeting_id == m.id,
+                AttentionLog.user_id != m.host_id
+            ).all()
+            
+            avg_score = 0
+            max_warnings = 0
+            if logs:
+                avg_score = round(sum(l.attention_score for l in logs) / len(logs))
+                max_warnings = max((l.warnings_count for l in logs), default=0)
+                
+            results.append({
+                "id": m.id,
+                "meeting_number": m.meeting_number,
+                "is_host": (m.host_id == user_id),
+                "host_username": host_name,
+                "start_time": start.isoformat(),
+                "end_time": m.end_time.isoformat() if m.end_time else None,
+                "duration_minutes": duration_min,
+                "participants_count": unique_participants,
+                "avg_attention_score": avg_score,
+                "total_warnings": max_warnings,
+                "is_active": m.is_active,
+                "has_analytics": len(logs) > 0
+            })
+            
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

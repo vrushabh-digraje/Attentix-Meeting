@@ -13,6 +13,7 @@ export interface MeetingSession {
     roomCode: string;
     meetingId: number;
     role: 'host' | 'participant';
+    isPast?: boolean;
 }
 
 const App: React.FC = () => {
@@ -535,6 +536,10 @@ const App: React.FC = () => {
                     setMeeting(sess);
                     setView('meeting');
                 }} 
+                onViewReport={(sess: MeetingSession) => {
+                    setMeeting(sess);
+                    setView('dashboard');
+                }}
             />
         );
     }
@@ -558,7 +563,14 @@ const App: React.FC = () => {
             <UsageReport 
                 user={user} 
                 meeting={meeting} 
-                onReturnToMeeting={() => setView('meeting')}
+                onReturnToMeeting={() => {
+                    if (meeting.isPast) {
+                        setView('lobby');
+                        setMeeting(null);
+                    } else {
+                        setView('meeting');
+                    }
+                }} 
             />
         );
     }

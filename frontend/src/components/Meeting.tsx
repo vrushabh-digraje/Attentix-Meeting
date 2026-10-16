@@ -124,6 +124,8 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [showChatSidebar, setShowChatSidebar] = useState<boolean>(false);
     const [studentWarningsAlert, setStudentWarningsAlert] = useState<{ username: string, user_id: number } | null>(null);
     const [chatNotification, setChatNotification] = useState<{ username: string, message: string } | null>(null);
+    const [showEndMeetingModal, setShowEndMeetingModal] = useState<boolean>(false);
+    const [isEndingMeeting, setIsEndingMeeting] = useState<boolean>(false);
 
     // Refs to avoid state updates lagging inside callbacks
     const consecutiveDistractions = useRef<number>(0);
@@ -278,6 +280,13 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     handler.socket.on('participant-kicked', (data: any) => {
                         if (data.user_id === user.id) {
                             alert("You have been removed from the meeting by the host.");
+                            onLeave();
+                        }
+                    });
+
+                    handler.socket.on('meeting-ended', (data: any) => {
+                        if (meeting.role !== 'host') {
+                            alert(data.message || "The host has ended this meeting session.");
                             onLeave();
                         }
                     });
@@ -923,6 +932,44 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         }
     };
 
+    // Cleanly End Meeting & Store Final Analytics
+    const handleEndMeeting = async () => {
+        if (isEndingMeeting) return;
+        setIsEndingMeeting(true);
+
+        const remainingLogs = [...logsBufferRef.current];
+        logsBufferRef.current = [];
+
+        if (meeting.role === 'host') {
+            try {
+                await fetch(`${apiBase}/api/meetings/end`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        meeting_id: meeting.meetingId,
+                        user_id: user.id,
+                        logs: remainingLogs
+                    })
+                });
+            } catch (e) {
+                console.error("Failed to cleanly end meeting on backend:", e);
+            } finally {
+                setIsEndingMeeting(false);
+            }
+            setShowEndMeetingModal(true);
+        } else {
+            if (remainingLogs.length > 0) {
+                fetch(`${apiBase}/api/attention/log/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logs: remainingLogs })
+                }).catch(() => {});
+            }
+            setIsEndingMeeting(false);
+            onLeave();
+        }
+    };
+
     const peerIds = Object.keys(remotePeers).map(Number);
     const hasRemote = peerIds.length > 0;
     
@@ -1390,13 +1437,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 <div className="shrink-0">
                     <button 
                         onClick={() => {
-                            if (confirm(meeting.role === 'host' ? "End meeting for all or leave session?" : "Leave this meeting session?")) {
-                                onLeave();
+                            if (confirm(meeting.role === 'host' ? "End this meeting for all participants?" : "Leave this meeting session?")) {
+                                handleEndMeeting();
                             }
                         }}
-                        className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-stateRed hover:bg-[#C92020] text-white text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95"
+                        disabled={isEndingMeeting}
+                        className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-stateRed hover:bg-[#C92020] text-white text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
                     >
-                        {meeting.role === 'host' ? 'End' : 'Leave'}
+                        {isEndingMeeting ? 'Ending...' : (meeting.role === 'host' ? 'End' : 'Leave')}
                     </button>
                 </div>
 
@@ -1516,6 +1564,42 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black text-zoomBlue uppercase tracking-wider">{chatNotification.username}</span>
                         <span className="text-[11px] text-zoomTextSec truncate mt-0.5">{chatNotification.message}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Host Meeting End Summary Modal */}
+            {showEndMeetingModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-zoomPanel border-2 border-zoomBlue max-w-md w-full p-6 sm:p-8 rounded-2xl shadow-2xl text-center">
+                        <div className="w-14 h-14 rounded-full bg-zoomBlue/15 text-zoomBlue flex items-center justify-center text-2xl mx-auto mb-4 border border-zoomBlue/30">
+                            📊
+                        </div>
+                        <h3 className="text-lg font-extrabold text-zoomText mb-1.5">Meeting Concluded & Saved</h3>
+                        <p className="text-xs text-zoomTextSec mb-6 leading-relaxed">
+                            All student attention records, warning logs, and attendance summaries have been permanently stored in your previous meetings history.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button 
+                                onClick={() => {
+                                    setShowEndMeetingModal(false);
+                                    onOpenDashboard();
+                                }}
+                                className="flex-1 py-2.5 bg-zoomBlue hover:bg-zoomBlueHover text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center justify-center gap-1.5 active:scale-95"
+                            >
+                                <span>View Attention Report</span>
+                                <span>📊</span>
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setShowEndMeetingModal(false);
+                                    onLeave();
+                                }}
+                                className="flex-1 py-2.5 bg-zoomCard border border-zoomBorder hover:bg-white/10 text-zoomText rounded-lg text-xs font-bold transition-all active:scale-95"
+                            >
+                                Return to Lobby 🏠
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

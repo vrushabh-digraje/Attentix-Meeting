@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Video, LogOut, Clock, Calendar } from 'lucide-react';
+import { Video, LogOut, Clock, Calendar, BarChart3, Users, ChevronRight, RotateCcw } from 'lucide-react';
 import { UserSession, MeetingSession } from '../App';
 
 interface LobbyProps {
     user: UserSession;
     onLogout: () => void;
     onEnterMeeting: (session: MeetingSession) => void;
+    onViewReport: (session: MeetingSession) => void;
 }
 
-const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
+const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting, onViewReport }) => {
     const rawUrl = (import.meta as any).env.VITE_API_URL || '';
     const rawApiBase = (rawUrl.includes('render.com') || !rawUrl)
         ? 'https://vrushabhdigraje09--attentix-backend-attentix-app.modal.run'
@@ -33,6 +34,24 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
     const [isSchedulingMeeting, setIsSchedulingMeeting] = useState<boolean>(false);
     const [isStartingDueMeeting, setIsStartingDueMeeting] = useState<boolean>(false);
 
+    const [pastMeetings, setPastMeetings] = useState<any[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+
+    const loadPastMeetings = async () => {
+        setIsLoadingHistory(true);
+        try {
+            const res = await fetch(`${apiBase}/api/meetings/history/${user.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setPastMeetings(data);
+            }
+        } catch (e) {
+            console.error('Failed to load past meetings history:', e);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
     const loadScheduledMeetings = async () => {
         try {
             const res = await fetch(`${apiBase}/api/meetings/scheduled/${user.id}`);
@@ -45,7 +64,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
         }
     };
 
-    // Real-Time Clock & Scheduled meetings load
+    // Real-Time Clock, Scheduled meetings load & Past meetings history load
     useEffect(() => {
         const updateClock = () => {
             const now = new Date();
@@ -56,6 +75,7 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
         const interval = setInterval(updateClock, 1000);
         
         loadScheduledMeetings();
+        loadPastMeetings();
         
         return () => clearInterval(interval);
     }, [user.id]);
@@ -353,6 +373,120 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting }) => {
                         </div>
                     </div>
 
+                </div>
+
+                {/* Previous Meeting Reports & Session History */}
+                <div className="mt-8 w-full">
+                    <div className="glass-panel p-6 sm:p-8 rounded-2xl shadow-2xl relative overflow-hidden">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-zoomBorder">
+                            <div>
+                                <h3 className="text-sm font-bold text-zoomText uppercase tracking-wider flex items-center gap-2">
+                                    <BarChart3 size={18} className="text-zoomBlue" /> Previous Meeting Reports & Analytics
+                                </h3>
+                                <p className="text-[11px] text-zoomTextSec mt-0.5">
+                                    Review saved attention scores, student warning counters, and engagement records from past meetings
+                                </p>
+                            </div>
+                            <button 
+                                onClick={loadPastMeetings}
+                                disabled={isLoadingHistory}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zoomBorder hover:bg-white/10 text-[11px] text-zoomTextSec hover:text-white transition-all w-fit self-start sm:self-auto"
+                                title="Refresh Meeting History"
+                            >
+                                <RotateCcw size={12} className={isLoadingHistory ? "animate-spin text-zoomBlue" : ""} />
+                                <span>Refresh History</span>
+                            </button>
+                        </div>
+
+                        {isLoadingHistory && pastMeetings.length === 0 ? (
+                            <div className="py-12 flex flex-col items-center justify-center text-center text-zoomTextSec text-xs">
+                                <div className="w-8 h-8 rounded-full border-2 border-zoomBlue border-t-transparent animate-spin mb-3"></div>
+                                <span>Loading previous session records...</span>
+                            </div>
+                        ) : pastMeetings.length === 0 ? (
+                            <div className="py-12 flex flex-col items-center justify-center text-center text-zoomTextSec text-xs">
+                                <span className="text-3xl mb-2">📊</span>
+                                <span className="font-semibold text-zoomText">No previous meeting reports found</span>
+                                <span className="text-[11px] text-zoomTextSec/80 mt-1 max-w-sm">
+                                    When you host or join meetings, the full session attention logs, scoreboard, and distraction reports will be stored permanently here.
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col divide-y divide-zoomBorder/60 max-h-[380px] overflow-y-auto pr-1">
+                                {pastMeetings.map((m) => {
+                                    const startDate = new Date(m.start_time);
+                                    const isHost = m.is_host;
+                                    const avgScore = m.avg_attention_score || 0;
+
+                                    let scoreBadgeColor = 'bg-stateGreen/15 text-stateGreen border-stateGreen/30';
+                                    if (avgScore === 0) scoreBadgeColor = 'bg-slate-800 text-slate-400 border-slate-700';
+                                    else if (avgScore < 50) scoreBadgeColor = 'bg-stateRed/20 text-stateRed border-stateRed/40';
+                                    else if (avgScore < 75) scoreBadgeColor = 'bg-stateYellow/20 text-stateYellow border-stateYellow/40';
+
+                                    const formattedNumber = m.meeting_number && m.meeting_number.length === 9 
+                                        ? `${m.meeting_number.slice(0,3)}-${m.meeting_number.slice(3,6)}-${m.meeting_number.slice(6,9)}`
+                                        : m.meeting_number;
+
+                                    return (
+                                        <div 
+                                            key={m.id}
+                                            className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/[0.02] rounded-xl px-2 transition-all group"
+                                        >
+                                            <div className="flex items-start sm:items-center gap-3.5">
+                                                <div className="w-10 h-10 rounded-xl bg-zoomCard border border-zoomBorder flex items-center justify-center text-zoomBlue shrink-0 font-bold text-xs shadow-sm group-hover:border-zoomBlue/40 transition-colors">
+                                                    <BarChart3 size={20} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-mono font-bold text-zoomText text-sm tracking-wider">
+                                                            {formattedNumber}
+                                                        </span>
+                                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${isHost ? 'bg-zoomBlue/15 text-zoomBlue border-zoomBlue/30' : 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                                                            {isHost ? 'Host (You)' : `Host: ${m.host_username}`}
+                                                        </span>
+                                                        {m.is_active && (
+                                                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-stateGreen/20 text-stateGreen border border-stateGreen/40 flex items-center gap-1">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-stateGreen animate-pulse"></span>
+                                                                Live
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-[11px] text-zoomTextSec mt-1 flex-wrap">
+                                                        <span>📅 {startDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} @ {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span>⏱️ {m.duration_minutes} min{m.duration_minutes === 1 ? '' : 's'}</span>
+                                                        <span>👥 {m.participants_count} Student{m.participants_count === 1 ? '' : 's'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 self-end sm:self-center">
+                                                {avgScore > 0 && (
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[9px] uppercase tracking-wider text-zoomTextSec font-semibold">Avg Focus</span>
+                                                        <span className={`text-xs font-black px-2 py-0.5 rounded border ${scoreBadgeColor}`}>
+                                                            {avgScore}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <button 
+                                                    onClick={() => onViewReport({
+                                                        meetingId: m.id,
+                                                        roomCode: m.meeting_number,
+                                                        role: isHost ? 'host' : 'participant',
+                                                        isPast: true
+                                                    })}
+                                                    className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zoomBlue hover:bg-zoomBlueHover text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95 group-hover:shadow-zoomBlue/20"
+                                                >
+                                                    <span>View Attention Report</span>
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
