@@ -36,6 +36,13 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting, onViewRep
 
     const [pastMeetings, setPastMeetings] = useState<any[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+    const [autoEnd20Min, setAutoEnd20Min] = useState<boolean>(() => localStorage.getItem('attentix_auto_end_20min') !== 'false');
+
+    const toggleAutoEnd20Min = () => {
+        const next = !autoEnd20Min;
+        setAutoEnd20Min(next);
+        localStorage.setItem('attentix_auto_end_20min', String(next));
+    };
 
     const loadPastMeetings = async () => {
         setIsLoadingHistory(true);
@@ -262,7 +269,24 @@ const Lobby: React.FC<LobbyProps> = ({ user, onLogout, onEnterMeeting, onViewRep
                         <div className="absolute -top-12 -right-12 w-24 h-24 bg-zoomBlue/10 rounded-full blur-2xl"></div>
                         
                         <div className="z-10">
-                            <h3 className="text-xs font-bold mb-6 text-zoomTextSec uppercase tracking-widest">Start or Join Meeting</h3>
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xs font-bold text-zoomTextSec uppercase tracking-widest">Start or Join Meeting</h3>
+                                <button 
+                                    onClick={toggleAutoEnd20Min}
+                                    className={`text-[10px] px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 font-bold ${
+                                        autoEnd20Min
+                                            ? 'bg-zoomBlue/15 text-zoomBlue border-zoomBlue/40 hover:bg-zoomBlue/25'
+                                            : 'bg-zoomBorder/30 text-zoomTextSec border-zoomBorder hover:text-zoomText'
+                                    }`}
+                                    title={autoEnd20Min ? "20-minute auto-end with prompt is ON. Click to toggle OFF." : "20-minute auto-end is OFF. Click to toggle ON."}
+                                >
+                                    <Clock size={11} className={autoEnd20Min ? "text-zoomBlue" : "text-zoomTextSec"} />
+                                    <span>20m Limit:</span>
+                                    <span className={autoEnd20Min ? "text-stateGreen font-extrabold" : "text-stateRed font-extrabold"}>
+                                        {autoEnd20Min ? "ON" : "OFF"}
+                                    </span>
+                                </button>
+                            </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                                 <button 
