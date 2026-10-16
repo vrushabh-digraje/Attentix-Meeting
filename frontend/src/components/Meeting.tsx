@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video as VideoIcon, VideoOff, Share2, Users, AlertTriangle, LogOut, MessageSquare, MonitorUp, BarChart2, BarChart3, UserPlus, Clock } from 'lucide-react';
+import { Mic, MicOff, Video as VideoIcon, VideoOff, Share2, Users, AlertTriangle, LogOut, MessageSquare, MonitorUp, BarChart2, BarChart3, UserPlus } from 'lucide-react';
 import { UserSession, MeetingSession } from '../App';
 import { AttentionEngine } from '../utils/attentionEngine';
 import { WebRTCHandler } from '../utils/webrtcHandler';
@@ -126,57 +126,6 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
     const [chatNotification, setChatNotification] = useState<{ username: string, message: string } | null>(null);
     const [showEndMeetingModal, setShowEndMeetingModal] = useState<boolean>(false);
     const [isEndingMeeting, setIsEndingMeeting] = useState<boolean>(false);
-
-    // 20-Minute Auto-End & Elapsed Timer States
-    const meetingStartTimeRef = useRef<number>(Date.now());
-    const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
-    const [autoEndEnabled, setAutoEndEnabled] = useState<boolean>(() => localStorage.getItem('attentix_auto_end_20min') !== 'false');
-    const autoEndEnabledRef = useRef<boolean>(localStorage.getItem('attentix_auto_end_20min') !== 'false');
-    const nextPromptTimeRef = useRef<number>(20 * 60); // 20 minutes (1200 seconds)
-    const [showTimeLimitModal, setShowTimeLimitModal] = useState<boolean>(false);
-    const showTimeLimitModalRef = useRef<boolean>(false);
-    const [autoEndCountdown, setAutoEndCountdown] = useState<number>(60);
-    const [meetingExtensionNotice, setMeetingExtensionNotice] = useState<string | null>(null);
-
-    // Format seconds into MM:SS or HH:MM:SS
-    const formatTime = (totalSeconds: number) => {
-        const hrs = Math.floor(totalSeconds / 3600);
-        const mins = Math.floor((totalSeconds % 3600) / 60);
-        const secs = totalSeconds % 60;
-        if (hrs > 0) {
-            return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    // Synthesize prompt chime for Host when 20m threshold is reached
-    const playPromptChime = () => {
-        try {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioContextClass) return;
-            const audioCtx = new AudioContextClass();
-            const now = audioCtx.currentTime;
-            [now, now + 0.2, now + 0.4].forEach((start, idx) => {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.frequency.setValueAtTime(587.33 + (idx * 120), start);
-                gain.gain.setValueAtTime(0.2, start);
-                osc.start(start);
-                osc.stop(start + 0.18);
-            });
-        } catch (e) {
-            console.warn('Audio prompt blocked by browser context');
-        }
-    };
-
-    const handleToggleAutoEnd = () => {
-        const nextVal = !autoEndEnabled;
-        setAutoEndEnabled(nextVal);
-        autoEndEnabledRef.current = nextVal;
-        localStorage.setItem('attentix_auto_end_20min', String(nextVal));
-    };
 
     // Refs to avoid state updates lagging inside callbacks
     const consecutiveDistractions = useRef<number>(0);
@@ -1021,69 +970,6 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
         }
     };
 
-    const handleContinueMeeting = () => {
-        setShowTimeLimitModal(false);
-        showTimeLimitModalRef.current = false;
-        // Extend for another 20 minutes (1200 seconds) from current elapsed time
-        const currentElapsed = Math.floor((Date.now() - meetingStartTimeRef.current) / 1000);
-        nextPromptTimeRef.current = currentElapsed + (20 * 60);
-        setMeetingExtensionNotice("Meeting extended by 20 minutes.");
-        setTimeout(() => {
-            setMeetingExtensionNotice(null);
-        }, 4000);
-    };
-
-    const handleRejectContinueAndEnd = () => {
-        setShowTimeLimitModal(false);
-        showTimeLimitModalRef.current = false;
-        handleEndMeeting();
-    };
-
-    // Live meeting elapsed timer & 20-minute threshold watcher
-    useEffect(() => {
-        const timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - meetingStartTimeRef.current) / 1000);
-            setElapsedSeconds(elapsed);
-
-            // Check 20-minute limit if role is host and option is enabled
-            if (
-                meeting.role === 'host' &&
-                autoEndEnabledRef.current &&
-                !showTimeLimitModalRef.current &&
-                !isEndingMeeting &&
-                elapsed >= nextPromptTimeRef.current
-            ) {
-                setShowTimeLimitModal(true);
-                showTimeLimitModalRef.current = true;
-                setAutoEndCountdown(60);
-                playPromptChime();
-            }
-        }, 1000);
-
-        return () => clearInterval(timerInterval);
-    }, [meeting.role, isEndingMeeting]);
-
-    // Active countdown when 20-minute prompt modal is open
-    useEffect(() => {
-        if (!showTimeLimitModal) return;
-
-        const interval = setInterval(() => {
-            setAutoEndCountdown(prev => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    setShowTimeLimitModal(false);
-                    showTimeLimitModalRef.current = false;
-                    // Auto-end meeting since admin did not click continue
-                    handleEndMeeting();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [showTimeLimitModal]);
-
     const peerIds = Object.keys(remotePeers).map(Number);
     const hasRemote = peerIds.length > 0;
     
@@ -1129,38 +1015,12 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             )}
 
             {/* Center-Top Meeting ID Header */}
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2 sm:gap-2.5 bg-zoomPanel/95 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold backdrop-blur-md border border-zoomBorder shadow-xl text-zoomText max-w-[95vw] overflow-x-auto">
-                <span className="w-2 h-2 rounded-full bg-stateGreen animate-pulse shrink-0"></span>
-                <span className="text-zoomTextSec text-[11px] shrink-0">Room:</span>
-                <span className="text-zoomText font-mono tracking-wider font-extrabold text-xs sm:text-[13px] shrink-0">
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40 flex items-center gap-2.5 bg-zoomPanel/90 px-4 py-2 rounded-full text-xs font-semibold backdrop-blur-sm border border-zoomBorder shadow-xl text-zoomText">
+                <span className="w-2 h-2 rounded-full bg-stateGreen animate-pulse"></span>
+                <span className="text-zoomTextSec">Room:</span>
+                <span className="text-zoomText font-mono tracking-wider font-extrabold text-[13px]">
                     {meeting.roomCode.slice(0,3)}-{meeting.roomCode.slice(3,6)}-{meeting.roomCode.slice(6,9)}
                 </span>
-
-                <span className="text-zoomBorder/80 shrink-0">|</span>
-
-                {/* Elapsed Meeting Timer */}
-                <div className="flex items-center gap-1 text-zoomText font-mono text-[11px] sm:text-xs shrink-0" title="Elapsed meeting duration">
-                    <Clock size={12} className="text-zoomBlue" />
-                    <span>{formatTime(elapsedSeconds)}</span>
-                </div>
-
-                {/* Host 20-min Auto-End Toggle Option */}
-                {meeting.role === 'host' && (
-                    <button
-                        onClick={handleToggleAutoEnd}
-                        className={`ml-1 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full border transition-all flex items-center gap-1 font-bold shrink-0 ${
-                            autoEndEnabled 
-                                ? 'bg-zoomBlue/15 text-zoomBlue border-zoomBlue/40 hover:bg-zoomBlue/25' 
-                                : 'bg-zoomBorder/40 text-zoomTextSec border-zoomBorder hover:text-zoomText'
-                        }`}
-                        title={autoEndEnabled ? "20-minute auto-end with prompt is ON. Click to toggle OFF." : "20-minute auto-end is OFF. Click to toggle ON."}
-                    >
-                        <span>⏱️ 20m Limit:</span>
-                        <span className={autoEndEnabled ? "text-stateGreen font-extrabold" : "text-stateRed font-extrabold"}>
-                            {autoEndEnabled ? "ON" : "OFF"}
-                        </span>
-                    </button>
-                )}
             </div>
 
             {/* Video Workspace (Speaker View layout: Horizontal thumbnails + Pinned Big Video) */}
@@ -1704,73 +1564,6 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black text-zoomBlue uppercase tracking-wider">{chatNotification.username}</span>
                         <span className="text-[11px] text-zoomTextSec truncate mt-0.5">{chatNotification.message}</span>
-                    </div>
-                </div>
-            )}
-
-            {/* Meeting Extension Confirmation Toast */}
-            {meetingExtensionNotice && (
-                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[110] bg-zoomPanel border border-stateGreen/50 text-stateGreen px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold animate-fade-in backdrop-blur-md">
-                    <span>⏱️</span>
-                    <span>{meetingExtensionNotice}</span>
-                </div>
-            )}
-
-            {/* 20-Minute Time Limit Prompt Modal for Host / Admin */}
-            {meeting.role === 'host' && showTimeLimitModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[120] flex items-center justify-center p-4 animate-fade-in select-none">
-                    <div className="bg-zoomPanel border-2 border-stateYellow max-w-md w-full p-6 sm:p-7 rounded-2xl shadow-2xl text-center relative overflow-hidden">
-                        {/* Top pulsing warning line */}
-                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-stateYellow to-stateRed animate-pulse" />
-                        
-                        <div className="w-14 h-14 rounded-full bg-stateYellow/15 text-stateYellow flex items-center justify-center text-2xl mx-auto mb-3 border border-stateYellow/30 shadow-inner">
-                            ⏱️
-                        </div>
-                        
-                        <h3 className="text-base sm:text-lg font-extrabold text-zoomText tracking-wide mb-1">
-                            Meeting Time Limit (20 Minutes)
-                        </h3>
-                        
-                        <p className="text-xs text-zoomTextSec mb-4 leading-relaxed">
-                            This meeting has reached the <strong className="text-zoomText">20-minute</strong> duration threshold. Would you like to continue the session or end it now?
-                        </p>
-
-                        {/* Countdown Notice Box */}
-                        <div className="bg-zoomControlBar/60 border border-zoomBorder rounded-xl p-3.5 mb-5 flex flex-col items-center justify-center">
-                            <span className="text-[11px] text-zoomTextSec font-medium">Automatic meeting termination in:</span>
-                            <span className="text-2xl font-black text-stateRed font-mono mt-0.5 tracking-wider">
-                                {autoEndCountdown}s
-                            </span>
-                            {/* Visual Progress Bar */}
-                            <div className="w-full bg-zoomBorder/50 h-1.5 rounded-full mt-2 overflow-hidden">
-                                <div 
-                                    className="h-full bg-stateRed transition-all duration-1000 rounded-full"
-                                    style={{ width: `${(autoEndCountdown / 60) * 100}%` }}
-                                />
-                            </div>
-                            <span className="text-[10px] text-zoomTextSec/80 mt-1.5">
-                                If you do not click continue, the meeting will automatically end and save all reports.
-                            </span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <button
-                                onClick={handleContinueMeeting}
-                                className="flex-1 py-2.5 px-4 bg-stateGreen hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 flex items-center justify-center gap-1.5"
-                            >
-                                <span>Continue Meeting (+20m)</span>
-                                <span>▶</span>
-                            </button>
-                            <button
-                                onClick={handleRejectContinueAndEnd}
-                                disabled={isEndingMeeting}
-                                className="flex-1 py-2.5 px-4 bg-stateRed hover:bg-[#C92020] text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5"
-                            >
-                                <span>{isEndingMeeting ? 'Ending...' : 'End Meeting Now'}</span>
-                                <span>⏹</span>
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}
