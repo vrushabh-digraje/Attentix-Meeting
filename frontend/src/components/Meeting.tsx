@@ -145,14 +145,17 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
             if (!AudioContextClass) return;
             const audioCtx = new AudioContextClass();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.15);
+            const now = audioCtx.currentTime;
+            [now, now + 0.2].forEach((start) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(750, start);
+                gain.gain.setValueAtTime(0.2, start);
+                osc.start(start);
+                osc.stop(start + 0.15);
+            });
         } catch (e) {
             console.warn('Audio warning blocked by browser context');
         }
@@ -462,10 +465,10 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 warnings_count: warningCountRef.current
             });
 
-            // Local warnings trigger (Warnings for camera off - 2 mins threshold)
+            // Local warnings trigger (Warnings for camera off - 1 min threshold)
             if (belowThresholdStartTimeRef.current === null) {
                 belowThresholdStartTimeRef.current = Date.now();
-            } else if (Date.now() - belowThresholdStartTimeRef.current >= 120000) { // 2 minutes (120,000 ms)
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 60000) { // 1 minute (60,000 ms)
                 triggerInattentionWarning(state);
                 belowThresholdStartTimeRef.current = null;
             }
@@ -650,15 +653,18 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
             return;
         }
 
-        // Local Warning Alert logic (Score < 20% continuously for 2 minutes)
-        if (score < 20 && results.detected) {
+        // Student is inattentive if state is Distracted/Inactive, score < 50%, or face is not detected (walked away / turned away)
+        const isDistractedOrInactive = state !== 'Attentive' || score < 50 || !results.detected;
+
+        if (isDistractedOrInactive) {
             if (belowThresholdStartTimeRef.current === null) {
                 belowThresholdStartTimeRef.current = Date.now();
-            } else if (Date.now() - belowThresholdStartTimeRef.current >= 120000) { // 2 minutes (120,000 ms)
-                triggerInattentionWarning(state);
-                belowThresholdStartTimeRef.current = null; // reset countdown
+            } else if (Date.now() - belowThresholdStartTimeRef.current >= 60000) { // 1 minute (60,000 ms)
+                triggerInattentionWarning(state || 'Inactive');
+                belowThresholdStartTimeRef.current = null; // reset countdown for next warning cycle
             }
         } else {
+            // Student is focused and attentive: reset timer
             belowThresholdStartTimeRef.current = null;
         }
 
@@ -1189,18 +1195,26 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                             )
                         )}
 
-                        {/* Warning Alert Popup (Zoom notification toast at bottom-left) */}
+                        {/* Warning Alert Popup (Centered prominent modal) */}
                         {meeting.role !== 'host' && showWarning && (
-                            <div className="absolute bottom-6 left-6 w-[320px] p-5 rounded-xl border border-zoomBorder bg-zoomPanel shadow-2xl z-50 flex flex-col items-center text-center">
-                                <div className="text-stateRed text-xl mb-1"><AlertTriangle /></div>
-                                <h3 className="text-stateRed font-extrabold text-sm mb-1 uppercase tracking-wider">Attention Warning</h3>
-                                <p className="text-zoomText text-xs leading-relaxed mb-4">{warningMsg}</p>
-                                <button 
-                                    onClick={handleDismissWarning}
-                                    className="w-full py-2 bg-zoomControlBar hover:bg-slate-200 border border-zoomBorder text-zoomText rounded-lg font-bold text-[11px] transition-all"
-                                >
-                                    Dismiss Warning
-                                </button>
+                            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in select-none">
+                                <div className="bg-zoomPanel border-2 border-stateRed max-w-sm w-full p-6 sm:p-7 rounded-2xl shadow-2xl text-center flex flex-col items-center">
+                                    <div className="w-14 h-14 rounded-full bg-stateRed/15 text-stateRed flex items-center justify-center text-2xl mb-3 border border-stateRed/30 animate-pulse">
+                                        <AlertTriangle size={28} />
+                                    </div>
+                                    <h3 className="text-stateRed font-extrabold text-base mb-1 uppercase tracking-wider">
+                                        Attention Warning ({warningCount} of 3)
+                                    </h3>
+                                    <p className="text-zoomText text-xs leading-relaxed mb-5">
+                                        {warningMsg}
+                                    </p>
+                                    <button 
+                                        onClick={handleDismissWarning}
+                                        className="w-full py-2.5 bg-stateRed hover:bg-[#C92020] text-white rounded-xl font-bold text-xs transition-all shadow-lg active:scale-95"
+                                    >
+                                        I am Focused (Dismiss Warning)
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
