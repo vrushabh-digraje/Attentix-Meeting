@@ -670,53 +670,6 @@ const UsageReport: React.FC<UsageReportProps> = ({ user, meeting, onReturnToMeet
                             </div>
                         </div>
 
-                        {/* Detailed Participant Cards Grid */}
-                        <div>
-                            <h3 className="text-sm font-bold text-zoomTextSec uppercase tracking-wider mb-4">Detailed Participant Matrix</h3>
-                            {activeList.length === 0 ? (
-                                <div className="glass-panel py-12 rounded-2xl text-center text-xs text-zoomTextSec">
-                                    No active participants connected.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                                    {activeList.map(p => {
-                                        let borderClass = 'border-stateGreen/40 hover:border-stateGreen';
-                                        let scoreColor = 'text-stateGreen';
-                                        let dotColor = 'bg-stateGreen';
-                                        
-                                        if (p.state === 'Distracted') {
-                                            borderClass = 'border-stateYellow/40 hover:border-stateYellow';
-                                            scoreColor = 'text-stateYellow';
-                                            dotColor = 'bg-stateYellow';
-                                        } else if (p.state === 'Inactive') {
-                                            borderClass = 'border-stateRed/40 hover:border-stateRed';
-                                            scoreColor = 'text-stateRed';
-                                            dotColor = 'bg-stateRed';
-                                        }
-
-                                        return (
-                                            <div key={p.user_id} className={`glass-panel p-5 rounded-xl border-2 ${borderClass} relative flex flex-col items-center text-center transition-all duration-300`}>
-                                                <div className={`absolute top-4 right-4 w-2.5 h-2.5 rounded-full ${dotColor}`}></div>
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-zoomBlue to-amber-500 flex items-center justify-center text-white font-extrabold text-lg mb-3 shadow-md">
-                                                    {p.username.charAt(0).toUpperCase()}
-                                                </div>
-                                                <h4 className="font-bold text-sm text-zoomText">{p.username}</h4>
-                                                <p className="text-[10px] text-zoomTextSec mt-0.5">State: <strong className={scoreColor}>{p.state}</strong></p>
-                                                <div className={`text-2xl font-black ${scoreColor} mt-2.5`}>{p.score}%</div>
-                                                <p className="text-[9px] text-zoomTextSec mt-0.5">Warnings: {p.warnings}/3</p>
-                                                <button 
-                                                    onClick={() => handleRemoveParticipant(p.user_id, p.username)}
-                                                    className="mt-4 w-full py-1.5 border border-stateRed/40 hover:bg-stateRed hover:text-white rounded-lg text-[10px] font-bold text-stateRed bg-transparent transition-all"
-                                                >
-                                                    Remove Participant
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
                         {/* Student Performance & Warning Summary Table */}
                         <div className="glass-panel p-6 rounded-2xl">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-zoomBorder">
