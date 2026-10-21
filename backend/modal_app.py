@@ -136,7 +136,16 @@ def inspect_database():
     print(f"🎓 PARTICIPANT ATTENDANCE RECORDS ({len(participants)} total):")
     print("=" * 65)
     for p in participants:
-        print(f"  • Meeting ID {p.meeting_id} | User ID {p.user_id} | Role: {p.role} | Joined: {p.joined_at}")
+        print(f"  • Meeting ID {p.meeting_id} | User ID {p.user_id} | Joined: {p.joined_at} | Left: {p.left_at}")
+        
+    logs = session.query(AttentionLog).all()
+    print("\n" + "=" * 65)
+    print(f"📊 ATTENTION & WARNING LOGS ({len(logs)} total):")
+    print("=" * 65)
+    for l in logs[-15:]:  # show recent 15 logs
+        print(f"  • Meeting {l.meeting_id} | User {l.user_id} | Score: {l.attention_score}% | State: {l.state} | Warnings: {l.warnings_count} | Time: {l.timestamp}")
+    if len(logs) > 15:
+        print(f"  ... ({len(logs) - 15} earlier logs omitted)")
     print("=" * 65 + "\n")
 
 @app.function(

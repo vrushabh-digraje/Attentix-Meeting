@@ -1034,7 +1034,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 
                 {/* Left Side: Host-Only Attention Scoreboard */}
                 {meeting.role === 'host' && showScoreboard && (
-                    <div className="fixed inset-y-0 left-0 w-56 border-r border-zoomBorder bg-zoomPanel/95 backdrop-blur-md flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 md:z-20 shadow-2xl md:shadow-none">
+                    <div className="fixed inset-y-0 left-0 w-60 max-w-[85vw] md:relative md:w-60 border-r border-zoomBorder bg-zoomPanel/95 backdrop-blur-md flex flex-col shrink-0 h-[calc(100vh-75px)] md:h-full z-40 md:z-20 shadow-2xl md:shadow-none">
                         <div className="p-4 border-b border-zoomBorder bg-zoomControlBar/90 flex justify-between items-center">
                             <div>
                                 <h3 className="font-bold text-xs text-zoomOrange uppercase tracking-widest flex items-center gap-1.5">
@@ -1042,7 +1042,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                 </h3>
                                 <p className="text-[9px] text-slate-400 mt-1 leading-snug">Real-time engagement scores of all participants</p>
                             </div>
-                            <button onClick={() => setShowScoreboard(false)} className="md:hidden text-slate-400 hover:text-white text-xs font-semibold px-2">✕</button>
+                            <button onClick={() => setShowScoreboard(false)} className="text-zoomTextSec hover:text-zoomText text-xs font-semibold p-1 hover:bg-white/10 rounded transition-colors" title="Close Scoreboard">✕</button>
                         </div>
                         
                         <div className="flex-grow overflow-y-auto p-4 space-y-2">
@@ -1084,7 +1084,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                 )}
 
                 {/* Left Area: Video feeds */}
-                <div className="flex-grow flex flex-col md:flex-row-reverse overflow-hidden h-full">
+                <div className="flex-grow flex flex-col md:flex-row-reverse overflow-hidden h-full min-w-0">
                     {/* Thumbnails Row (Top horizontal scrolling list on mobile, right column on desktop) */}
                     {hasRemote && (
                         <div className="w-full h-24 md:w-60 md:h-full bg-zoomControlBar/50 border-b md:border-b-0 md:border-l border-zoomBorder flex flex-row md:flex-col items-center gap-2 px-3 md:py-4 overflow-x-auto md:overflow-y-auto select-none py-1.5 sm:py-2 shrink-0 scrollbar-thin">
@@ -1149,9 +1149,9 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                     )}
 
                     {/* Big Viewport (Active Pinned Video) */}
-                    <div className="flex-grow flex items-center justify-center p-2 sm:p-4 relative bg-zoomDarkBg">
+                    <div className="flex-grow flex items-center justify-center p-2 sm:p-4 md:p-6 relative bg-zoomDarkBg min-w-0 min-h-0 overflow-hidden">
                         {activePin === 'local' ? (
-                            <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                            <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video max-h-full bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl flex items-center justify-center">
                                 <video 
                                     ref={localVideoRef} 
                                     className={`w-full h-full ${isScreenSharing ? 'object-contain' : 'object-cover'} transform ${isScreenSharing ? 'scale-x-[1]' : 'scale-x-[-1]'} ${videoEnabled ? 'block' : 'opacity-0 absolute pointer-events-none w-1 h-1'}`} 
@@ -1167,14 +1167,14 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                         <span className="text-xs text-zoomTextSec font-semibold tracking-wide">Camera Off</span>
                                     </div>
                                 )}
-                                <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold z-10 text-white">
+                                <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-sm text-xs font-semibold z-10 text-white">
                                     You (Pinned)
                                 </div>
                                 <canvas ref={canvasRef} className={`absolute top-0 left-0 w-full h-full pointer-events-none z-10 ${isScreenSharing ? 'hidden' : 'block'}`}></canvas>
                             </div>
                         ) : (
                             remotePeers[activePin as number] && (
-                                <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl">
+                                <div className="relative w-full max-w-lg aspect-[3/4] md:max-w-4xl md:aspect-video max-h-full bg-zoomCard border border-zoomBorder rounded-xl overflow-hidden shadow-2xl flex items-center justify-center">
                                     {remoteCameras[activePin as number] !== false ? (
                                         <ParticipantVideo 
                                             stream={remotePeers[activePin as number].stream} 
@@ -1188,7 +1188,7 @@ const Meeting: React.FC<MeetingProps> = ({ user, meeting, onLeave, onOpenDashboa
                                             <span className="text-xs text-zoomTextSec font-semibold tracking-wide">Camera Off</span>
                                         </div>
                                     )}
-                                    <div className="absolute bottom-3 left-3 bg-black/60 px-3 py-1 rounded-sm text-xs font-semibold text-white">
+                                    <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm px-3 py-1 rounded-sm text-xs font-semibold text-white">
                                         {remotePeers[activePin as number].peerName}
                                     </div>
                                 </div>
