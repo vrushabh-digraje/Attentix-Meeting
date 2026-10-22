@@ -24,7 +24,10 @@
       "output": "release"
     },
     "win": {
-      "target": "dir"
+      "target": [
+        "portable",
+        "nsis"
+      ]
     }
   }
 }
